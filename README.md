@@ -1,57 +1,57 @@
 # 🧠 Mind Space
 
-纯前端思绪整理工具——把脑海中的想法快速"倒"进画布，用色区归类、拖拽整理。单 HTML 文件，零依赖，开箱即用。
+A pure front-end thought-organizing tool — dump ideas from your mind onto an infinite canvas and organize them with colored zones and drag-and-drop. Single HTML file, zero dependencies, works offline.
 
-![single-file](https://img.shields.io/badge/单文件-HTML-success) ![no-deps](https://img.shields.io/badge/依赖-零-brightgreen) ![dark-mode](https://img.shields.io/badge/暗色模式-支持-blue)
+![single-file](https://img.shields.io/badge/single-file-HTML-success) ![no-deps](https://img.shields.io/badge/dependencies-zero-brightgreen) ![dark-mode](https://img.shields.io/badge/dark%20mode-supported-blue)
 
-## ✨ 功能特性
+## ✨ Features
 
-### 核心
-- **快速记录**：顶部输入框输入想法，`Enter` 创建卡片；支持 `^标签` 语法直接打标（如 `想跑步 ^health`）
-- **色区归类**：拖拽卡片到色区自动归类；可自定义主题色区（名称、颜色）
-- **滚轮缩放 / 拖拽平移**：无限画布，自由探索
-- **归档不丢**：归档的想法可在抽屉中随时恢复
-- **搜索自适应**：搜索时自动聚焦到匹配卡片
-- **导入 / 导出**：JSON 格式，支持合并（按 ID 去重）与覆盖两种模式
-- **撤销系统**：`Ctrl/Cmd+Z` 撤销删除、归档、编辑、清空
+### Core
+- **Quick capture**: Type an idea in the top input bar, press `Enter` to create a card. Supports `^tag` syntax for instant tagging (e.g. `want to run ^health`)
+- **Zone categorization**: Drag a card into a colored zone to auto-categorize. Custom themes with editable names and colors
+- **Wheel zoom / drag pan**: Infinite canvas, free exploration
+- **Archive without loss**: Archived ideas can be restored anytime from the drawer
+- **Search auto-fit**: Searching auto-focuses the viewport onto matching cards
+- **Import / Export**: JSON format, supports merge (dedup by ID) and overwrite modes
+- **Undo system**: `Ctrl/Cmd+Z` undoes delete, archive, edit, and clear-all
 
-### v3 新增
-- **画布扩展**：16000×16000 超大画布（CSS 变量可调）
-- **编辑撤销**：编辑卡片后可撤销恢复编辑前内容与位置
-- **坐标迁移**：未分区色区改为相对窗口中心，导入 v2 数据自动迁移
-- **暗色色区遮罩**：暗色模式下浅色色区自动加遮罩，不刺眼
-- **Mac 触控板手势**：双指捏合缩放、双指滑动平移、双击智能缩放
-- **底部快捷键提示条**：画布底部常显，根据 OS 模式动态显示
+### v3 additions
+- **Expanded canvas**: 16000×16000 super-large canvas (CSS variable, adjustable)
+- **Edit undo**: Editing a card is undoable — restores pre-edit content and position
+- **Coordinate migration**: Unsorted zone is now relative to the window center; importing v2 data auto-migrates coordinates
+- **Dark-mode zone overlay**: Light-colored zones get a subtle overlay in dark mode so they aren't glaring
+- **Mac trackpad gestures**: Pinch to zoom, two-finger scroll to pan, double-tap smart zoom
+- **Bottom shortcut hint bar**: Always visible at the canvas bottom, updates dynamically with OS mode
 
-### v3.2 新增
-- **智能 Ctrl/Cmd+Enter**：编辑弹窗→保存；输入框→提交；其他→聚焦输入框
-- **一键清空**：危险操作二次确认 + 可撤销，保留主题色区
+### v3.2 additions
+- **Smart Ctrl/Cmd+Enter**: Edit modal open → save; input focused → submit; otherwise → focus the input
+- **Clear all**: Dangerous action with confirmation + undoable; preserves theme zones
 
-## ⌨️ 快捷键
+## ⌨️ Shortcuts
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl/Cmd + Enter` | 智能：保存编辑 / 提交想法 / 聚焦输入框 |
-| `Ctrl/Cmd + K` | 聚焦搜索 |
-| `Ctrl/Cmd + Z` | 撤销（删除/归档/编辑/清空） |
-| `Esc` | 关闭弹窗 / 清空输入 |
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl/Cmd + Enter` | Smart: save edit / submit idea / focus input |
+| `Ctrl/Cmd + K` | Focus search |
+| `Ctrl/Cmd + Z` | Undo (delete / archive / edit / clear-all) |
+| `Esc` | Close popup / clear input |
 
-**Mac 触控板手势**：双指捏合缩放 · 双指滑动平移 · 单击拖动移动卡片 · 双击智能缩放
+**Mac trackpad gestures**: pinch to zoom · two-finger scroll to pan · click-drag to move cards · double-tap to smart zoom
 
-## 🚀 使用
+## 🚀 Usage
 
-直接用浏览器打开 `index.html` 即可，无需安装任何东西。数据保存在浏览器 `localStorage`。
+Open `index.html` in any browser. No installation required. Data is stored in the browser's `localStorage`.
 
-## 🎨 主题
+## 🎨 Theming
 
-- **暗色 / 浅色**：跟随系统或手动切换
-- **Win / Mac 模式**：切换快捷键符号（Ctrl / ⌘）与触控板手势支持
-- **自定义色区**：管理主题中可修改名称与颜色
+- **Dark / Light**: Follow the system or toggle manually
+- **Win / Mac mode**: Switches shortcut symbols (Ctrl / ⌘) and trackpad gesture support
+- **Custom zones**: Edit zone names and colors in the topic manager
 
-## 📦 数据
+## 📦 Data
 
-所有数据存储在浏览器本地（`localStorage`，键名 `mindspace.v1`）。可用「导出」定期备份。
+All data lives locally in the browser (`localStorage`, key `mindspace.v1`). Use "Export" for periodic backups.
 
-## 📄 许可
+## 📄 License
 
 MIT
