@@ -1,0 +1,49 @@
+name: Validate HTML
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check HTML structure
+        run: |
+          set -e
+          node -e "
+          const fs = require('fs');
+          const h = fs.readFileSync('index.html', 'utf8');
+          const checks = [
+            ['<!DOCTYPE html>', 'DOCTYPE'],
+            ['<html', 'html open tag'],
+            ['</html>', 'html close tag'],
+            ['<style>', 'style open tag'],
+            ['</style>', 'style close tag'],
+            ['<script>', 'script open tag'],
+            ['</script>', 'script close tag'],
+            ['<body>', 'body open tag'],
+            ['</body>', 'body close tag'],
+          ];
+          let ok = true;
+          for (const [needle, name] of checks) {
+            if (!h.includes(needle)) { console.error('FAIL: missing', name); ok = false; }
+            else console.log('OK:', name);
+          }
+          const divO = (h.match(/<div/g) || []).length;
+          const divC = (h.match(/<\/div>/g) || []).length;
+          const btnO = (h.match(/<button/g) || []).length;
+          const btnC = (h.match(/<\/button>/g) || []).length;
+          console.log('div:', divO, '/', divC);
+          console.log('button:', btnO, '/', btnC);
+          if (divO !== divC) { console.error('FAIL: div tag mismatch'); ok = false; }
+          if (btnO !== btnC) { console.error('FAIL: button tag mismatch'); ok = false; }
+          if (!ok) process.exit(1);
+          console.log('All HTML structure checks passed.');
+          "
