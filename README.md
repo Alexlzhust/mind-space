@@ -4,6 +4,8 @@ A pure front-end thought-organizing tool — dump ideas from your mind onto an i
 
 ![single-file](https://img.shields.io/badge/single-file-HTML-success) ![no-deps](https://img.shields.io/badge/dependencies-zero-brightgreen) ![dark-mode](https://img.shields.io/badge/dark%20mode-supported-blue)
 
+**🔗 Live demo: https://alexlzhust.github.io/mind-space/**
+
 ## ✨ Features
 
 ### Core
@@ -40,7 +42,14 @@ A pure front-end thought-organizing tool — dump ideas from your mind onto an i
 
 ## 🚀 Usage
 
-Open `index.html` in any browser. No installation required. Data is stored in the browser's `localStorage`.
+### Option A — try it live
+Open the hosted demo on GitHub Pages:
+**https://alexlzhust.github.io/mind-space/**
+
+### Option B — run locally
+Download `index.html` and open it in any browser. No build step, no server, no installation required.
+
+Data is stored in the browser's `localStorage` (key `mindspace.v1`).
 
 ## 🎨 Theming
 
