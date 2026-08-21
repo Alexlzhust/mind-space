@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mind Space</title>
+<style>
+/* ===== Reset & Global ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ===== Theme tokens (light defaults) ===== */
+:root {
+  --bg: #fafafa;
+  --bg-header: #fff;
+  --bg-input-row: #fff;
+  --bg-canvas: #f8f8f8;
+  --bg-canvas-dot: #e0e0e0;
+  --bg-card: #fff;
+  --bg-input: #fff;
+  --text: #333;
+  --text-muted: #999;
+  --text-soft: #666;
+  --border: #e8e8e8;
+  --border-soft: #f0f0f0;
+  --border-input: #d9d9d9;
+  --accent: #5B7FA5;
+  --accent-hover: #4a6d91;
+  --accent-bg: #E8F4FD;
+  --hover-bg: #f0f0f0;
+  --danger: #d32f2f;
+  --danger-bg: #FDECEA;
+  --zone-unsorted-bg: #fafafa;
+  --zone-unsorted-header: #e8e8e8;
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.12);
+  --shadow-drag: 0 8px 24px rgba(0,0,0,0.18);
+  --card-radius: 10px;
+  --zone-radius: 16px;
+  --zone-header-radius: 14px;
+  --btn-radius: 6px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --scrollbar-bg: rgba(0,0,0,0.12);
+  /* 画布尺寸改为变量，便于扩展（v3: 8000 → 16000） */
+  --canvas-w: 16000px;
+  --canvas-h: 16000px;
+}
+
+/* Dark via system preference (unless user forced light) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1a1a;
+    --bg-header: #242424;
+    --bg-input-row: #242424;
+    --bg-canvas: #1e1e1e;
+    --bg-canvas-dot: #2a2a2a;
+    --bg-card: #2a2a2a;
+    --bg-input: #2a2a2a;
+    --text: #e2e2e2;
+    --text-muted: #777;
+    --text-soft: #aaa;
+    --border: #383838;
+    --border-soft: #2e2e2e;
+    --border-input: #404040;
+    --accent: #6B9BC4;
+    --accent-hover: #5a8ab3;
+    --accent-bg: #1e3a4a;
+    --hover-bg: #333;
+    --danger: #ef5350;
+    --danger-bg: #3a2424;
+    --zone-unsorted-bg: #222;
+    --zone-unsorted-header: #383838;
+    --shadow-card: 0 2px 8px rgba(0,0,0,0.35);
+    --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.45);
+    --shadow-drag: 0 8px 24px rgba(0,0,0,0.5);
+    --scrollbar-bg: rgba(255,255,255,0.18);
+  }
+}
+/* Dark forced by user */
+:root[data-theme="dark"] {
+  --bg: #1a1a1a;
+  --bg-header: #242424;
+  --bg-input-row: #242424;
+  --bg-canvas: #1e1e1e;
+  --bg-canvas-dot: #2a2a2a;
+  --bg-card: #2a2a2a;
+  --bg-input: #2a2a2a;
+  --text: #e2e2e2;
+  --text-muted: #777;
+  --text-soft: #aaa;
+  --border: #383838;
+  --border-soft: #2e2e2e;
+  --border-input: #404040;
+  --accent: #6B9BC4;
+  --accent-hover: #5a8ab3;
+  --accent-bg: #1e3a4a;
+  --hover-bg: #333;
+  --danger: #ef5350;
+  --danger-bg: #3a2424;
+  --zone-unsorted-bg: #222;
+  --zone-unsorted-header: #383838;
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.45);
+  --shadow-drag: 0 8px 24px rgba(0,0,0,0.5);
+  --scrollbar-bg: rgba(255,255,255,0.18);
+}
+
+/* ===== OS (Mac) mode overrides ===== */
+body.os-mac {
+  --card-radius: 12px;
+  --zone-radius: 20px;
+  --zone-header-radius: 18px;
+  --btn-radius: 8px;
+  --font: -apple-system, "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+  --shadow-card: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-card-hover: 0 6px 18px rgba(0,0,0,0.12);
+}
+/* Mac-style thin translucent scrollbars */
+body.os-mac ::-webkit-scrollbar { width: 8px; height: 8px; }
+body.os-mac ::-webkit-scrollbar-thumb { background: var(--scrollbar-bg); border-radius: 8px; }
+body.os-mac ::-webkit-scrollbar-track { background: transparent; }
+/* Mac-style hover: soft translucent overlay instead of grey */
+body.os-mac #header button.tool:hover,
+body.os-mac #view-tabs button:hover { background: rgba(0,0,0,0.05); }
+body.os-mac .card-actions button:hover { background: rgba(0,0,0,0.05); }
+
+html, body { height: 100%; overflow: hidden; font-family: var(--font); font-size: 14px; color: var(--text); background: var(--bg); }
+body { display: flex; flex-direction: column; }
+button { cursor: pointer; border: none; background: none; font: inherit; color: inherit; }
+input, textarea { font: inherit; outline: none; color: var(--text); }
+input::placeholder, textarea::placeholder { color: var(--text-muted); }
+
+/* ===== Header ===== */
+#header {
+  height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px;
+  background: var(--bg-header); border-bottom: 1px solid var(--border); z-index: 100; position: relative;
+}
+#header .logo { font-size: 18px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+#header input[type="text"] { flex: 1; max-width: 360px; height: 34px; padding: 0 10px; border: 1px solid var(--border-input); border-radius: var(--btn-radius); font-size: 13px; background: var(--bg-input); }
+#header input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,127,165,0.15); }
+#header .sep { width: 1px; height: 24px; background: var(--border); }
+#header button.tool { height: 32px; padding: 0 10px; border-radius: var(--btn-radius); font-size: 12px; white-space: nowrap; }
+#header button.tool:hover { background: var(--hover-bg); }
+/* 危险按钮（清空）红色文字 + hover 红底 */
+#header button.tool.danger { color: var(--danger); }
+#header button.tool.danger:hover { background: var(--danger-bg); }
+#header button.primary { background: var(--accent); color: #fff; }
+#header button.primary:hover { background: var(--accent-hover); }
+#header .icon-btn { width: 32px; height: 32px; border-radius: var(--btn-radius); font-size: 16px; display: flex; align-items: center; justify-content: center; }
+#header .icon-btn:hover { background: var(--hover-bg); }
+#view-tabs { display: flex; gap: 2px; }
+#view-tabs button { height: 30px; padding: 0 12px; border-radius: var(--btn-radius); font-size: 12px; }
+#view-tabs button:hover { background: var(--hover-bg); }
+#view-tabs button.active { background: var(--accent); color: #fff; }
+#view-tabs button.active:hover { background: var(--accent-hover); }
+
+/* ===== Input Row ===== */
+#input-row {
+  height: 52px; display: flex; align-items: center; gap: 8px; padding: 0 16px;
+  background: var(--bg-input-row); border-bottom: 1px solid var(--border-soft);
+}
+#idea-input {
+  flex: 1; height: 36px; padding: 0 12px; border: 1px solid var(--border-input); border-radius: 8px; font-size: 14px; background: var(--bg-input);
+}
+#idea-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,127,165,0.15); }
+#idea-input::placeholder { color: var(--text-muted); }
+
+/* ===== Canvas Wrap ===== */
+#canvas-wrap {
+  position: relative; flex: 1; overflow: hidden; cursor: grab;
+  background: var(--bg-canvas);
+  background-image: radial-gradient(circle, var(--bg-canvas-dot) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+#canvas-wrap:active { cursor: grabbing; }
+#canvas-wrap.grabbing { cursor: grabbing; }
+#canvas-wrap.dragging-card { cursor: default; }
+
+/* ===== Canvas ===== */
+#canvas {
+  position: absolute; top: 0; left: 0;
+  width: var(--canvas-w); height: var(--canvas-h);
+  transform-origin: 0 0;
+}
+
+/* ===== Zones ===== */
+.zone {
+  position: absolute;
+  border-radius: var(--zone-radius); border: 2px dashed transparent;
+  min-width: 700px; min-height: 400px;
+  transition: box-shadow 0.15s;
+}
+.zone-hover { box-shadow: 0 0 0 4px rgba(91,127,165,0.3); border-color: var(--accent); }
+.zone-header {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 38px; padding: 0 14px; border-radius: var(--zone-header-radius) var(--zone-header-radius) 0 0;
+  cursor: grab; user-select: none; font-weight: 600; font-size: 14px;
+}
+.zone-header:active { cursor: grabbing; }
+.zone-header .zone-del { opacity: 0; font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 4px; }
+.zone-header:hover .zone-del { opacity: 0.5; }
+.zone-header .zone-del:hover { opacity: 1; background: rgba(0,0,0,0.1); }
+
+/* ===== Cards ===== */
+.card {
+  position: absolute; width: 220px; min-height: 90px;
+  background: var(--bg-card); border-radius: var(--card-radius); border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  cursor: grab; user-select: none;
+  transition: box-shadow 0.15s;
+  display: flex; flex-direction: column;
+}
+/* 1.4: 暗色模式下色区加半透明黑色遮罩，避免浅色主题刺眼 */
+:root[data-theme="dark"] .zone::before {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(0,0,0,0.25); pointer-events: none;
+  border-radius: var(--zone-radius);
+}
+/* 系统暗色偏好下同样遮罩（非强制 light） */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .zone::before {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(0,0,0,0.25); pointer-events: none;
+    border-radius: var(--zone-radius);
+  }
+}
+.card:hover { box-shadow: var(--shadow-card-hover); }
+.card:active { cursor: grabbing; }
+.card.dragging { box-shadow: var(--shadow-drag); z-index: 999; opacity: 0.92; }
+.card-body { flex: 1; padding: 10px 12px 6px; font-size: 13px; line-height: 1.55; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-word; color: var(--text); }
+.card.expanded .card-body { -webkit-line-clamp: unset; overflow: visible; display: block; }
+/* Action buttons always visible (touch-friendly) instead of hover-only */
+.card-actions { display: flex; gap: 2px; padding: 0 8px 2px; justify-content: flex-end; opacity: 0.55; transition: opacity 0.15s; }
+.card:hover .card-actions { opacity: 1; }
+.card-actions button { font-size: 11px; padding: 3px 8px; border-radius: 4px; }
+.card-actions button:hover { background: var(--hover-bg); }
+.card-actions .act-del:hover { background: var(--danger-bg); color: var(--danger); }
+.card-actions .act-archive:hover { background: var(--accent-bg); color: var(--accent); }
+.card-expand { align-self: flex-start; margin: 0 0 4px 12px; font-size: 11px; padding: 2px 8px; border-radius: 4px; color: var(--accent); }
+.card-expand:hover { background: var(--accent-bg); }
+.card-tags { display: flex; gap: 4px; padding: 0 12px 8px; flex-wrap: wrap; }
+.card-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  color: #fff; white-space: nowrap;
+}
+.card[data-status="archived"] { opacity: 0.5; }
+
+/* ===== Home (back-to-origin) button ===== */
+#btn-home {
+  position: absolute; left: 16px; bottom: 16px; z-index: 50;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--bg-card); border: 1px solid var(--border);
+  box-shadow: var(--shadow-card); font-size: 18px; color: var(--text-soft);
+  display: flex; align-items: center; justify-content: center;
+}
+#btn-home:hover { box-shadow: var(--shadow-card-hover); color: var(--accent); }
+
+/* ===== Shortcut hint bar (bottom center, always visible) ===== */
+#shortcut-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.35;
+  transition: opacity 0.2s;
+  pointer-events: none;  /* 不阻挡画布操作 */
+  white-space: nowrap;
+  box-shadow: var(--shadow-card);
+}
+/* hover 画布时稍微明显一点 */
+#canvas-wrap:hover #shortcut-hint { opacity: 0.6; }
+#shortcut-hint kbd {
+  background: var(--hover-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 10px;
+  margin: 0 2px;
+}
+#shortcut-hint .sep {
+  margin: 0 8px;
+  color: var(--text-muted);
+}
+
+/* ===== Archive Drawer ===== */
+#archive-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 200; }
+#archive-overlay.open { display: block; }
+#archive-drawer {
+  position: fixed; top: 0; right: -420px; width: 400px; height: 100%;
+  background: var(--bg-header); box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+  z-index: 201; transition: right 0.25s ease;
+  display: flex; flex-direction: column;
+}
+#archive-drawer.open { right: 0; }
+#archive-drawer .drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+#archive-drawer .drawer-header h3 { font-size: 16px; }
+#archive-drawer .drawer-list { flex: 1; overflow-y: auto; padding: 12px; }
+/* Restore button moved BELOW text, full-width, large tap target, row hover highlight */
+.archive-item {
+  padding: 12px; border: 1px solid var(--border-soft); border-radius: 8px; margin-bottom: 8px;
+  display: flex; flex-direction: column; gap: 8px; transition: background 0.12s;
+}
+.archive-item:hover { background: var(--hover-bg); }
+.archive-item .arc-text { font-size: 13px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: var(--text); }
+.archive-item .restore { width: 100%; height: 34px; border-radius: 6px; border: 1px solid var(--border-input); font-size: 13px; color: var(--accent); }
+.archive-item .restore:hover { background: var(--accent-bg); border-color: var(--accent); }
+
+/* ===== Edit Modal ===== */
+#modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 300; align-items: center; justify-content: center; }
+#modal-overlay.open { display: flex; }
+#edit-modal {
+  background: var(--bg-header); border-radius: 14px; width: 440px; max-height: 80vh;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15); padding: 24px; display: flex; flex-direction: column; gap: 16px;
+}
+#edit-modal h3 { font-size: 16px; margin-bottom: 4px; }
+#edit-modal textarea { width: 100%; min-height: 100px; padding: 10px; border: 1px solid var(--border-input); border-radius: 8px; font-size: 13px; resize: vertical; line-height: 1.5; background: var(--bg-input); color: var(--text); }
+#edit-modal textarea:focus { border-color: var(--accent); }
+#edit-tags-input { width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--border-input); border-radius: 8px; font-size: 13px; background: var(--bg-input); color: var(--text); }
+#edit-tags-input:focus { border-color: var(--accent); }
+#edit-tags-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+#tag-autocomplete { display: none; position: absolute; left: 0; right: 0; top: 36px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-card-hover); z-index: 10; max-height: 180px; overflow-y: auto; }
+#tag-autocomplete div { padding: 6px 10px; font-size: 13px; cursor: pointer; color: var(--text); }
+#tag-autocomplete div.ac-active, #tag-autocomplete div:hover { background: var(--accent-bg); color: var(--accent); }
+#edit-modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+#edit-modal .modal-actions button { height: 34px; padding: 0 16px; border-radius: 8px; font-size: 13px; }
+#edit-modal .btn-save { background: var(--accent); color: #fff; }
+#edit-modal .btn-save:hover { background: var(--accent-hover); }
+#edit-modal .btn-cancel { border: 1px solid var(--border-input); }
+#edit-modal .btn-cancel:hover { background: var(--hover-bg); }
+
+/* ===== Topic Manage Modal ===== */
+#topic-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 300; align-items: center; justify-content: center; }
+#topic-modal.open { display: flex; }
+#topic-modal > div {
+  background: var(--bg-header); border-radius: 14px; width: 460px; max-height: 70vh;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15); padding: 24px; display: flex; flex-direction: column; gap: 14px;
+}
+#topic-modal h3 { font-size: 16px; }
+#topic-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.topic-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-soft); }
+.topic-row .tcolor { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; border: 1px solid var(--border); }
+.topic-row input.tcolor-edit { width: 28px; height: 28px; padding: 0; border: 1px solid var(--border-input); border-radius: 6px; flex-shrink: 0; background: none; cursor: pointer; }
+.topic-row .tname { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); }
+.topic-row input.tname-edit { flex: 1; height: 28px; padding: 0 8px; border: 1px solid var(--border-input); border-radius: 6px; font-size: 13px; background: var(--bg-input); color: var(--text); }
+.topic-row button { font-size: 11px; padding: 3px 8px; border-radius: 4px; }
+.topic-row button:hover { background: var(--hover-bg); }
+.topic-row button.del:hover { background: var(--danger-bg); color: var(--danger); }
+#topic-add-row { display: flex; gap: 8px; }
+#topic-add-row input { flex: 1; height: 34px; padding: 0 10px; border: 1px solid var(--border-input); border-radius: 8px; font-size: 13px; background: var(--bg-input); color: var(--text); }
+#topic-add-row button { height: 34px; padding: 0 14px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; }
+#topic-modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+#topic-modal .modal-actions button { height: 34px; padding: 0 16px; border-radius: 8px; font-size: 13px; border: 1px solid var(--border-input); }
+
+/* ===== Import Modal ===== */
+#import-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 300; align-items: center; justify-content: center; }
+#import-modal.open { display: flex; }
+#import-modal > div {
+  background: var(--bg-header); border-radius: 14px; width: 380px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15); padding: 24px; display: flex; flex-direction: column; gap: 16px;
+}
+#import-modal h3 { font-size: 16px; }
+#import-modal p { color: var(--text-soft); }
+#import-modal .mode-btns { display: flex; gap: 8px; }
+#import-modal .mode-btns button { flex: 1; height: 38px; border-radius: 8px; border: 2px solid var(--border); font-size: 13px; }
+#import-modal .mode-btns button.sel { border-color: var(--accent); background: var(--accent-bg); }
+#import-modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+#import-modal .modal-actions button { height: 34px; padding: 0 16px; border-radius: 8px; font-size: 13px; }
+#import-modal .btn-do { background: var(--accent); color: #fff; }
+
+/* ===== Tutorial (P1) ===== */
+#tutorial-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; }
+#tutorial-overlay.open { display: flex; }
+#tutorial-box {
+  background: var(--bg-header); border-radius: 16px; padding: 32px 36px; max-width: 460px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2); text-align: center; color: var(--text);
+}
+#tutorial-box h2 { font-size: 20px; margin-bottom: 16px; color: var(--accent); }
+#tutorial-box p { font-size: 13px; line-height: 1.8; color: var(--text-soft); text-align: left; margin-bottom: 6px; }
+#tutorial-box .t-highlight { color: var(--accent); font-weight: 600; }
+#tutorial-box button {
+  margin-top: 20px; height: 40px; padding: 0 32px; border-radius: 10px;
+  background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
+}
+
+/* ===== Empty State ===== */
+#empty-hint {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center; color: var(--text-muted); pointer-events: none; font-size: 14px; line-height: 2;
+}
+
+/* ===== Toasts ===== */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: var(--bg-header); padding: 10px 24px; border-radius: 10px;
+  font-size: 13px; z-index: 600; opacity: 0; transition: opacity 0.2s; pointer-events: none;
+}
+#toast.show { opacity: 1; }
+
+/* ===== Confirm Dialog ===== */
+#confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 400; align-items: center; justify-content: center; }
+#confirm-overlay.open { display: flex; }
+#confirm-box {
+  background: var(--bg-header); border-radius: 12px; padding: 24px; width: 340px; text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15); color: var(--text);
+}
+#confirm-box p { font-size: 14px; margin-bottom: 20px; white-space: pre-wrap; }
+#confirm-box .c-actions { display: flex; gap: 8px; justify-content: center; }
+#confirm-box .c-actions button { height: 34px; padding: 0 20px; border-radius: 8px; font-size: 13px; }
+/* Cancel = primary (accent), Confirm = secondary (grey) per design review */
+#confirm-box .c-no { background: var(--accent); color: #fff; }
+#confirm-box .c-yes { border: 1px solid var(--border-input); color: var(--text-soft); }
+#confirm-box .c-yes:hover { background: var(--hover-bg); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <span class="logo">🧠 Mind Space</span>
+  <input type="text" id="search-input" placeholder="搜索想法...">
+  <div id="view-tabs">
+    <button class="active" data-view="all">全部</button>
+    <button data-view="unsorted">未整理</button>
+    <button data-view="sorted">已整理</button>
+    <button data-view="archived">已归档</button>
+  </div>
+  <span class="sep"></span>
+  <button class="tool" id="btn-topics">管理主题</button>
+  <button class="tool" id="btn-archive-list">归档列表</button>
+  <button class="tool" id="btn-export">导出</button>
+  <button class="tool" id="btn-import">导入</button>
+  <!-- 清空所有想法（危险操作，二次确认 + 可撤销） -->
+  <button class="tool danger" id="btn-clear-all" title="删除所有想法">清空</button>
+  <!-- Dark-mode toggle -->
+  <button class="icon-btn" id="btn-theme" title="切换深色/浅色">🌙</button>
+  <!-- OS (Win/Mac) mode toggle -->
+  <button class="icon-btn" id="btn-os" title="切换 Win / Mac 模式">🖥️</button>
+</div>
+
+<!-- Input Row -->
+<div id="input-row">
+  <input type="text" id="idea-input" placeholder="输入想法，回车记录。支持 ^标签 语法，如：想跑步 ^health" autofocus>
+</div>
+
+<!-- Canvas -->
+<div id="canvas-wrap">
+  <div id="canvas">
+    <div id="empty-hint">✨ 还没有想法，在上面输入框中写下第一个吧</div>
+  </div>
+  <button id="btn-home" title="回到原点">⌂</button>
+  <!-- v3.1: 底部常显快捷键提示条 -->
+  <div id="shortcut-hint"></div>
+</div>
+
+<!-- Archive Drawer -->
+<div id="archive-overlay"></div>
+<div id="archive-drawer">
+  <div class="drawer-header">
+    <h3>📦 归档列表</h3>
+    <button id="btn-close-archive" style="font-size:20px;line-height:1;">×</button>
+  </div>
+  <div class="drawer-list" id="archive-list"></div>
+</div>
+
+<!-- Edit Modal -->
+<div id="modal-overlay">
+  <div id="edit-modal">
+    <h3>编辑想法</h3>
+    <textarea id="edit-text" placeholder="想法正文..."></textarea>
+    <div style="position:relative;">
+      <input type="text" id="edit-tags-input" placeholder="标签，用空格分隔多个标签">
+      <div id="tag-autocomplete"></div>
+    </div>
+    <div id="edit-tags-hint">输入标签名，空格分隔。第一个标签决定所属色区。↓ 选择，Enter 确认。</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-edit-cancel">取消</button>
+      <button class="btn-save" id="btn-edit-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topic Modal -->
+<div id="topic-modal">
+  <div>
+    <h3>管理主题</h3>
+    <div id="topic-list"></div>
+    <div id="topic-add-row">
+      <input type="text" id="new-topic-name" placeholder="新主题名称">
+      <button id="btn-add-topic">添加</button>
+    </div>
+    <div class="modal-actions">
+      <button id="btn-topic-close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div id="import-modal">
+  <div>
+    <h3>导入数据</h3>
+    <p style="font-size:13px;">选择之前导出的 JSON 文件</p>
+    <input type="file" id="import-file" accept=".json" style="font-size:13px;">
+    <div class="mode-btns">
+      <button class="sel" data-mode="merge">合并（按ID去重）</button>
+      <button data-mode="overwrite">覆盖（替换全部）</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-import-cancel">取消</button>
+      <button class="btn-do" id="btn-import-do">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <p id="confirm-msg"></p>
+    <div class="c-actions">
+      <button class="c-no" id="btn-confirm-no">取消</button>
+      <button class="c-yes" id="btn-confirm-yes">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tutorial -->
+<div id="tutorial-overlay">
+  <div id="tutorial-box">
+    <h2>🧠 欢迎使用 Mind Space</h2>
+    <p>这是一个<span class="t-highlight">思绪整理空间</span>——把脑海中的想法快速"倒"进画布里。</p>
+    <p>✏️ 顶部输入框输入想法，<span class="t-highlight">回车</span>或 <span id="tut-mod1" class="t-highlight">Ctrl+Enter</span> 即创建卡片</p>
+    <p>🏷️ 输入 <span class="t-highlight">^标签</span> 可直接打标，如：<span class="t-highlight">想跑步 ^health</span></p>
+    <p>🖱️ <span class="t-highlight">拖拽卡片</span>到色区自动归类；<span class="t-highlight">滚轮缩放</span>画布</p>
+    <p>📦 归档不丢，随时可恢复</p>
+    <p id="tut-shortcut">⌨️ 快捷键：<span class="t-highlight" id="tut-s1">Ctrl+Enter</span> 记录 · <span class="t-highlight" id="tut-s2">Ctrl+K</span> 搜索 · <span class="t-highlight" id="tut-s3">Ctrl+Z</span> 撤销 · <span class="t-highlight">Esc</span> 关闭弹窗</p>
+    <button id="btn-tutorial-start">开始使用</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// Mind Space — 纯前端思绪整理工具
+// ============================================================
+
+const STORAGE_KEY = 'mindspace.v1';
+// 色板扩展为 16 色（原 8 色 + 新增 8 色）
+const TOPIC_COLORS = ['#E8F4FD','#E9F7EF','#FFF4E5','#F3E8FD','#FDECEA','#FFFBE5','#E8F8F5','#F5EEF8',
+  '#EBF5FB','#E8F8E8','#FDF2E9','#EBDEF0','#FAE5E5','#FCF3CF','#D5F5E3','#EBE9F7'];
+const TEXT_COLORS  = ['#2B6CB0','#1B7A3D','#B85C00','#6B3FA0','#C0392B','#8B7D00','#0D7A6B','#8B5FA0',
+  '#2471A3','#239B56','#CA6F1E','#8E44AD','#CB4335','#B7950B','#138D75','#7D3C98'];
+const UNSORTED_ID = '__unsorted__';
+const ZONE_W = 720;
+const ZONE_MIN_H = 400;
+const CARD_W = 220;
+const CARD_H = 100;
+const CARD_GAP_X = 20;
+const CARD_GAP_Y = 14;
+// 1.3: 未分区旧偏移量（v2 固定位置），用于坐标迁移
+const UNSORTED_OLD_OFFSET = { x: 1800, y: 1600 };
+
+// ===== State =====
+let state = {
+  ideas: [],
+  topics: [],
+  meta: { version: 1, tutorialShown: false }
+};
+
+// Runtime view state
+let view = { mode: 'all', scale: 1, tx: 0, ty: 0 };
+
+// Confirm callback
+let confirmCallback = null;
+
+// Undo stack (for Ctrl+Z — at least delete & archive)
+let undoStack = [];
+
+// OS mode: 'win' | 'mac'  (persisted)
+let osMode = (() => { try { return localStorage.getItem('mindspace.osMode') || 'win'; } catch(e) { return 'win'; } })();
+
+// ===== UUID =====
+function uuid() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxx-xxxx-4xxx-yxxx-xxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+// ===== Load / Save =====
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      state.ideas = parsed.ideas || [];
+      state.topics = parsed.topics || [];
+      state.meta = parsed.meta || { version: 1, tutorialShown: false };
+    }
+  } catch (e) { /* corrupted data, use defaults */ }
+  // 1.3: 坐标迁移——把 v2 固定偏移(1800,1600)坐标系迁移到窗口中心坐标系
+  if (!state.meta.migratedV3) {
+    migrateToWindowCenter();
+    state.meta.migratedV3 = true;
+    saveState();
+  }
+}
+
+/**
+ * 1.3 坐标迁移：旧坐标系以 (1800,1600) 为未分区原点，
+ * 新坐标系以窗口中心为未分区原点。所有卡片与自定义色区坐标减旧偏移再加新偏移。
+ */
+function migrateToWindowCenter() {
+  const oldOff = UNSORTED_OLD_OFFSET;
+  const newOff = getUnsortedZonePosition();
+  const dx = newOff.x - oldOff.x;
+  const dy = newOff.y - oldOff.y;
+  for (const card of state.ideas) {
+    if (card.position) { card.position.x += dx; card.position.y += dy; }
+  }
+  for (const topic of state.topics) {
+    if (topic.position) { topic.position.x += dx; topic.position.y += dy; }
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// ===== OS mode helpers =====
+/** Returns the platform-appropriate modifier key name for display. */
+function modKeyName() { return osMode === 'mac' ? 'Cmd' : 'Ctrl'; }
+/** Returns true if the keyboard event used the platform modifier (Cmd on mac, Ctrl otherwise). */
+function isMod(e) { return osMode === 'mac' ? e.metaKey : e.ctrlKey; }
+
+function applyOsMode() {
+  document.body.classList.toggle('os-mac', osMode === 'mac');
+  // Update dynamic shortcut hints in placeholders & tutorial
+  const mod = modKeyName();
+  const sym = osMode === 'mac' ? '⌘' : 'Ctrl';
+  const kSym = osMode === 'mac' ? '⌘K' : 'Ctrl+K';
+  const zSym = osMode === 'mac' ? '⌘Z' : 'Ctrl+Z';
+  const enterSym = osMode === 'mac' ? '⌘Enter' : 'Ctrl+Enter';
+  const ideaInputEl = document.getElementById('idea-input');
+  ideaInputEl.placeholder = `输入想法，${mod}+Enter 记录。支持 ^标签 语法，如：想跑步 ^health`;
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  set('tut-mod1', enterSym);
+  set('tut-s1', enterSym);
+  set('tut-s2', kSym);
+  set('tut-s3', zSym);
+  // OS toggle button reflects current mode
+  const osBtn = document.getElementById('btn-os');
+  if (osBtn) osBtn.title = `当前: ${osMode === 'mac' ? 'Mac' : 'Win'} 模式（点击切换）`;
+  // v3.1: 切换 OS 模式时刷新快捷键提示条
+  renderShortcutHint();
+}
+
+// ===== Theme (dark/light) =====
+function applyTheme() {
+  const root = document.documentElement;
+  const btn = document.getElementById('btn-theme');
+  let theme = 'system';
+  try { theme = localStorage.getItem('mindspace.theme') || 'system'; } catch(e) {}
+  if (theme === 'light') root.setAttribute('data-theme', 'light');
+  else if (theme === 'dark') root.setAttribute('data-theme', 'dark');
+  else root.removeAttribute('data-theme');
+  const isDark = root.getAttribute('data-theme') === 'dark' ||
+    (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (btn) btn.textContent = isDark ? '🌞' : '🌙';
+}
+
+// ===== Zone helpers =====
+// 1.3: 未分区色区位置改为相对窗口中心动态计算
+function getUnsortedZone() {
+  return {
+    id: UNSORTED_ID,
+    name: '未分区',
+    color: '#f0f0f0',
+    textColor: '#999',
+    position: getUnsortedZonePosition(),
+    _builtin: true
+  };
+}
+
+function getUnsortedZonePosition() {
+  // 窗口中心附近：使未分区色区大致位于视口中心
+  const cx = Math.round((typeof window !== 'undefined' ? window.innerWidth : 1280) / 2 - ZONE_W / 2);
+  const cy = Math.round((typeof window !== 'undefined' ? window.innerHeight : 800) / 2 - ZONE_MIN_H / 2);
+  return { x: cx, y: cy };
+}
+
+/** 新增主题色区位置：相对未分区右下方排布（替代旧固定 1800/1600） */
+function getTopicZoneOffset(index) {
+  const cols = 2;
+  const gap = 80;
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+  const base = getUnsortedZonePosition();
+  return { x: base.x + col * (ZONE_W + gap),
+           y: base.y + row * (ZONE_MIN_H + 200 + gap) };
+}
+
+
+
+function getAllZones() {
+  return [getUnsortedZone(), ...state.topics];
+}
+
+function getZoneById(id) {
+  if (id === UNSORTED_ID) return getUnsortedZone();
+  return state.topics.find(t => t.id === id);
+}
+
+function getZoneForCard(card) {
+  if (!card.tags || card.tags.length === 0 || card.status === 'raw') return getUnsortedZone();
+  const primaryTag = card.tags[0];
+  const topic = state.topics.find(t => t.name === primaryTag);
+  if (!topic && card.tags.length === 0) return getUnsortedZone();
+  return topic ? topic : getUnsortedZone();
+}
+
+function getCardsForZone(zone) {
+  if (zone.id === UNSORTED_ID) {
+    return state.ideas.filter(c =>
+      c.status !== 'archived' &&
+      (c.status === 'raw' || !c.tags || c.tags.length === 0 ||
+       !state.topics.some(t => t.name === c.tags[0]))
+    );
+  }
+  return state.ideas.filter(c =>
+    c.status !== 'archived' && c.tags && c.tags.length > 0 && c.tags[0] === zone.name
+  );
+}
+
+function getNextTopicColor() {
+  const used = new Set(state.topics.map(t => t.color));
+  for (const c of TOPIC_COLORS) {
+    if (!used.has(c)) return c;
+  }
+  return TOPIC_COLORS[state.topics.length % TOPIC_COLORS.length];
+}
+
+/** Compute a readable text color for a (possibly custom) background hex. */
+function contrastColor(hex) {
+  const c = String(hex).replace('#', '');
+  if (c.length < 6) return '#333';
+  const r = parseInt(c.substr(0, 2), 16), g = parseInt(c.substr(2, 2), 16), b = parseInt(c.substr(4, 2), 16);
+  const l = 0.299 * r + 0.587 * g + 0.114 * b;
+  return l > 160 ? '#333' : '#fff';
+}
+
+function getTextColorForBg(bgColor) {
+  const idx = TOPIC_COLORS.indexOf(bgColor);
+  return idx >= 0 ? TEXT_COLORS[idx] : contrastColor(bgColor);
+}
+
+function getNextZonePosition() {
+  // 1.3: 基于未分区（窗口中心）相对排布，而非固定 1800/1600
+  const base = getUnsortedZonePosition();
+  const cols = 2;
+  const gap = 80;
+  const n = state.topics.length;
+  const col = n % cols;
+  const row = Math.floor(n / cols);
+  return { x: base.x + col * (ZONE_W + gap), y: base.y + row * (ZONE_MIN_H + 200 + gap) };
+}
+
+/**
+ * Find an empty (non-overlapping) spot for a card inside a zone using a spiral search.
+ * @param {object} zone - The zone to place the card in.
+ * @param {string|null} excludeCardId - Card id to ignore when checking overlaps (the card being moved).
+ * @returns {{x:number,y:number}} Canvas-space coordinates for the card's top-left.
+ */
+function findSpotInZone(zone, excludeCardId) {
+  const cards = getCardsForZone(zone).filter(c => c.id !== excludeCardId);
+  const zoneX = zone.position.x;
+  const zoneY = zone.position.y;
+  // Spiral from center-top (below header)
+  const cx = zoneX + ZONE_W / 2 - CARD_W / 2;
+  const cy = zoneY + 46;
+  const sx = CARD_W + CARD_GAP_X;
+  const sy = CARD_H + CARD_GAP_Y;
+  for (let ring = 0; ring < 30; ring++) {
+    for (let dx = -ring; dx <= ring; dx++) {
+      for (let dy = -ring; dy <= ring; dy++) {
+        if (Math.abs(dx) !== ring && Math.abs(dy) !== ring) continue;
+        const x = cx + dx * sx;
+        const y = cy + dy * sy;
+        if (x < zoneX + 12 || y < zoneY + 44 || x + CARD_W > zoneX + ZONE_W - 12 || y + CARD_H > zoneY + ZONE_MIN_H + (Math.floor(cards.length / 3) * (CARD_H + CARD_GAP_Y)) - 12) {
+          if (y + CARD_H < zoneY + ZONE_MIN_H + 500) continue;
+        }
+        let overlap = false;
+        for (const c of cards) {
+          const cx2 = c.position.x, cy2 = c.position.y;
+          const cw = CARD_W, ch = CARD_H;
+          if (!(x + CARD_W <= cx2 || x >= cx2 + cw || y + CARD_H <= cy2 || y >= cy2 + ch)) {
+            overlap = true; break;
+          }
+        }
+        if (!overlap) return { x, y };
+      }
+    }
+  }
+  return { x: cx + Math.random() * 40, y: cy + Math.random() * 40 };
+}
+
+// ===== Compute zone height based on cards =====
+function computeZoneHeight(zone) {
+  const cards = getCardsForZone(zone);
+  if (cards.length === 0) return ZONE_MIN_H;
+  const colsPerRow = Math.max(1, Math.floor((ZONE_W - 24) / (CARD_W + CARD_GAP_X)));
+  const rows = Math.ceil(cards.length / colsPerRow);
+  return Math.max(ZONE_MIN_H, 46 + rows * (CARD_H + CARD_GAP_Y) + CARD_GAP_Y);
+}
+
+// ===== Toast (3.5s per design review) =====
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ===== Confirm =====
+function showConfirm(msg) {
+  return new Promise(resolve => {
+    document.getElementById('confirm-msg').textContent = msg;
+    document.getElementById('confirm-overlay').classList.add('open');
+    confirmCallback = resolve;
+  });
+}
+
+document.getElementById('btn-confirm-yes').addEventListener('click', () => {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  if (confirmCallback) { confirmCallback(true); confirmCallback = null; }
+});
+document.getElementById('btn-confirm-no').addEventListener('click', () => {
+  document.getElementById('confirm-overlay').classList.remove('open');
+  if (confirmCallback) { confirmCallback(false); confirmCallback = null; }
+});
+
+// ===== Undo (Ctrl+Z) =====
+function pushUndo(action) {
+  undoStack.push(action);
+  if (undoStack.length > 50) undoStack.shift();
+}
+
+function undo() {
+  const action = undoStack.pop();
+  if (!action) { showToast('没有可撤销的操作'); return; }
+  if (action.type === 'delete') {
+    // Restore the deleted card (deep copy kept on push)
+    state.ideas.push(action.card);
+  } else if (action.type === 'archive') {
+    const card = state.ideas.find(c => c.id === action.cardId);
+    if (card) {
+      card.status = action.prevStatus;
+      card.position = action.prevPos;
+    }
+  } else if (action.type === 'edit') {
+    // 1.2: 撤销编辑——恢复编辑前的 text/tags/position 完整快照
+    const card = state.ideas.find(c => c.id === action.cardId);
+    if (card) {
+      card.text = action.before.text;
+      card.tags = JSON.parse(JSON.stringify(action.before.tags));
+      card.position = { x: action.before.position.x, y: action.before.position.y };
+      card.status = action.before.status;
+    }
+  } else if (action.type === 'clearAll') {
+    // 功能2: 恢复一键清空——还原全部想法
+    state.ideas = action.cards;
+  }
+  saveState();
+  render();
+  showToast('已撤销');
+}
+
+/**
+ * Render the entire canvas: zones, then visible cards. Rebuilds DOM each call.
+ * Also post-processes cards to add expand/collapse buttons for long text.
+ */
+function render() {
+  const canvas = document.getElementById('canvas');
+  const emptyHint = document.getElementById('empty-hint');
+  canvas.innerHTML = '';
+  canvas.appendChild(emptyHint);
+
+  const allZones = getAllZones();
+  const visibleIdeas = getVisibleIdeas();
+
+  if (visibleIdeas.length === 0 && view.mode !== 'archived') {
+    emptyHint.style.display = '';
+  } else {
+    emptyHint.style.display = 'none';
+  }
+
+  // Render zones
+  for (const zone of allZones) {
+    const zh = computeZoneHeight(zone);
+    const el = document.createElement('div');
+    el.className = 'zone';
+    el.style.left = zone.position.x + 'px';
+    el.style.top = zone.position.y + 'px';
+    el.style.width = ZONE_W + 'px';
+    el.style.minHeight = zh + 'px';
+    el.style.height = zh + 'px';
+    el.style.background = zone.id === UNSORTED_ID ? 'var(--zone-unsorted-bg)' : zone.color;
+    el.dataset.topicId = zone.id;
+    el.dataset.topicName = zone.name;
+
+    const header = document.createElement('div');
+    header.className = 'zone-header';
+    header.style.background = zone.id === UNSORTED_ID ? 'var(--zone-unsorted-header)' : zone.color;
+    header.style.color = zone.id === UNSORTED_ID ? 'var(--text-muted)' : getTextColorForBg(zone.color);
+    header.innerHTML = `<span>${zone.name}</span>`;
+    if (!zone._builtin) {
+      const delBtn = document.createElement('span');
+      delBtn.className = 'zone-del';
+      delBtn.textContent = '×';
+      delBtn.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        deleteTopic(zone.id);
+      });
+      header.appendChild(delBtn);
+    }
+    el.appendChild(header);
+    canvas.appendChild(el);
+  }
+
+  // Render visible cards
+  const frag = document.createDocumentFragment();
+  for (const card of visibleIdeas) {
+    const el = createCardElement(card);
+    frag.appendChild(el);
+  }
+  canvas.appendChild(frag);
+
+  updateCanvasTransform();
+  postProcessCards();
+}
+
+function createCardElement(card) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.style.left = card.position.x + 'px';
+  el.style.top = card.position.y + 'px';
+  el.dataset.id = card.id;
+  if (card.status === 'archived') el.dataset.status = 'archived';
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+  body.textContent = card.text;
+  body.title = card.text;
+  el.appendChild(body);
+
+  const actions = document.createElement('div');
+  actions.className = 'card-actions';
+  const archiveBtn = document.createElement('button');
+  archiveBtn.className = 'act-archive';
+  archiveBtn.textContent = card.status === 'archived' ? '恢复' : '归档';
+  archiveBtn.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); toggleArchive(card); });
+  const delBtn = document.createElement('button');
+  delBtn.className = 'act-del';
+  delBtn.textContent = '删除';
+  delBtn.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); deleteIdea(card); });
+  actions.appendChild(archiveBtn);
+  actions.appendChild(delBtn);
+  el.appendChild(actions);
+
+  if (card.tags && card.tags.length > 0) {
+    const tagsDiv = document.createElement('div');
+    tagsDiv.className = 'card-tags';
+    for (const tag of card.tags) {
+      const tagEl = document.createElement('span');
+      tagEl.className = 'card-tag';
+      const topic = state.topics.find(t => t.name === tag);
+      tagEl.style.background = topic ? getTextColorForBg(topic.color) : '#999';
+      tagEl.textContent = tag;
+      tagsDiv.appendChild(tagEl);
+    }
+    el.appendChild(tagsDiv);
+  }
+
+  return el;
+}
+
+/** After cards are in the DOM, add expand/collapse buttons where text overflows 3 lines. */
+function postProcessCards() {
+  const canvas = document.getElementById('canvas');
+  canvas.querySelectorAll('.card').forEach(el => {
+    const body = el.querySelector('.card-body');
+    if (!body) return;
+    if (body.scrollHeight > body.clientHeight + 2 && !el.querySelector('.card-expand')) {
+      const btn = document.createElement('button');
+      btn.className = 'card-expand';
+      btn.textContent = '展开';
+      // stopPropagation on pointerdown so it doesn't trigger card drag / edit
+      btn.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); });
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (el.classList.toggle('expanded')) btn.textContent = '收起';
+        else btn.textContent = '展开';
+      });
+      el.appendChild(btn);
+    }
+  });
+}
+
+function getVisibleIdeas() {
+  const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
+  let ideas;
+  switch (view.mode) {
+    case 'unsorted':
+      ideas = state.ideas.filter(c => c.status === 'raw' && c.status !== 'archived');
+      break;
+    case 'sorted':
+      ideas = state.ideas.filter(c => c.status === 'sorted' && c.status !== 'archived');
+      break;
+    case 'archived':
+      ideas = state.ideas.filter(c => c.status === 'archived');
+      break;
+    default:
+      ideas = state.ideas.filter(c => c.status !== 'archived');
+  }
+  if (searchTerm) {
+    ideas = ideas.filter(c => c.text.toLowerCase().includes(searchTerm));
+  }
+  return ideas;
+}
+
+function updateCanvasTransform() {
+  const canvas = document.getElementById('canvas');
+  canvas.style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
+}
+
+/**
+ * Center the viewport on the unsorted zone. Used at init and for the "home" button.
+ * Computes tx/ty so the zone's center maps to the viewport's center.
+ */
+function centerViewOnUnsorted() {
+  const vp = document.getElementById('canvas-wrap');
+  const uz = getUnsortedZone();
+  view.scale = 1;
+  view.tx = vp.clientWidth / 2 - (uz.position.x + ZONE_W / 2) * view.scale;
+  view.ty = vp.clientHeight / 2 - (uz.position.y + ZONE_MIN_H / 2) * view.scale;
+  updateCanvasTransform();
+}
+
+/** Adjust scale + tx/ty so all given cards are visible within the viewport. */
+function fitViewToCards(cards) {
+  if (!cards.length) return;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const c of cards) {
+    minX = Math.min(minX, c.position.x);
+    minY = Math.min(minY, c.position.y);
+    maxX = Math.max(maxX, c.position.x + CARD_W);
+    maxY = Math.max(maxY, c.position.y + CARD_H);
+  }
+  const pad = 80;
+  const vp = document.getElementById('canvas-wrap');
+  const bw = (maxX - minX) + pad * 2;
+  const bh = (maxY - minY) + pad * 2;
+  const scale = Math.min(1, Math.min(vp.clientWidth / bw, vp.clientHeight / bh));
+  view.scale = Math.max(0.1, scale);
+  const ccx = (minX + maxX) / 2;
+  const ccy = (minY + maxY) / 2;
+  view.tx = vp.clientWidth / 2 - ccx * view.scale;
+  view.ty = vp.clientHeight / 2 - ccy * view.scale;
+  updateCanvasTransform();
+}
+
+// ===== Idea CRUD =====
+function createIdea(text, tags) {
+  const now = new Date().toISOString();
+  const idea = {
+    id: uuid(),
+    text: text,
+    created_at: now,
+    updated_at: now,
+    tags: tags || [],
+    status: (tags && tags.length > 0) ? 'sorted' : 'raw',
+    position: { x: 0, y: 0 }
+  };
+
+  const zone = getZoneForCard(idea);
+  idea.position = findSpotInZone(zone, null);
+
+  state.ideas.push(idea);
+
+  // Auto-create topic if tag doesn't exist
+  if (tags && tags.length > 0) {
+    for (const tag of tags) {
+      if (!state.topics.some(t => t.name === tag)) {
+        const color = getNextTopicColor();
+        const pos = getNextZonePosition();
+        state.topics.push({ id: uuid(), name: tag, color, textColor: getTextColorForBg(color), position: pos });
+      }
+    }
+  }
+
+  saveState();
+  render();
+}
+
+function updateIdea(ideaId, updates) {
+  const idea = state.ideas.find(c => c.id === ideaId);
+  if (!idea) return;
+  // 1.2: 编辑前推入撤销栈（完整快照：text/tags/position/status）
+  pushUndo({
+    type: 'edit',
+    cardId: ideaId,
+    before: {
+      text: idea.text,
+      tags: idea.tags ? JSON.parse(JSON.stringify(idea.tags)) : [],
+      position: { x: idea.position.x, y: idea.position.y },
+      status: idea.status
+    }
+  });
+  Object.assign(idea, updates);
+  idea.updated_at = new Date().toISOString();
+
+  // Auto-create topics for new tags
+  if (updates.tags) {
+    for (const tag of updates.tags) {
+      if (!state.topics.some(t => t.name === tag)) {
+        const color = getNextTopicColor();
+        const pos = getNextZonePosition();
+        state.topics.push({ id: uuid(), name: tag, color, textColor: getTextColorForBg(color), position: pos });
+      }
+    }
+    // Update status based on tags
+    if (updates.tags.length > 0 && idea.status !== 'archived') {
+      idea.status = 'sorted';
+    } else if (updates.tags.length === 0 && idea.status !== 'archived') {
+      idea.status = 'raw';
+    }
+  }
+
+  saveState();
+  render();
+}
+
+async function deleteIdea(card) {
+  const ok = await showConfirm(`确定要删除这条想法吗？\n"${card.text.substring(0, 50)}${card.text.length > 50 ? '...' : ''}"`);
+  if (!ok) return;
+  // Push undo before removing (deep copy so later edits don't mutate the snapshot)
+  pushUndo({ type: 'delete', card: JSON.parse(JSON.stringify(card)) });
+  state.ideas = state.ideas.filter(c => c.id !== card.id);
+  saveState();
+  render();
+  showToast('已删除（可撤销）');
+}
+
+async function toggleArchive(card) {
+  if (card.status === 'archived') {
+    card.status = card.tags && card.tags.length > 0 ? 'sorted' : 'raw';
+    card.position = findSpotInZone(getZoneForCard(card), card.id);
+    saveState();
+    render();
+    showToast('已恢复');
+  } else {
+    // Push undo before archiving
+    pushUndo({ type: 'archive', cardId: card.id, prevStatus: card.status, prevPos: { x: card.position.x, y: card.position.y } });
+    card.status = 'archived';
+    saveState();
+    render();
+    showToast('已归档（可撤销）');
+  }
+}
+
+// ===== Topic Management =====
+async function deleteTopic(topicId) {
+  const topic = state.topics.find(t => t.id === topicId);
+  if (!topic) return;
+  const ok = await showConfirm(`确定删除主题「${topic.name}」吗？\n该主题下的卡片将移至"未分区"。`);
+  if (!ok) return;
+  // Move cards out
+  for (const card of state.ideas) {
+    if (card.tags && card.tags.length > 0 && card.tags[0] === topic.name) {
+      card.tags = card.tags.filter(t => t !== topic.name);
+      if (card.tags.length === 0 && card.status !== 'archived') card.status = 'raw';
+    }
+  }
+  state.topics = state.topics.filter(t => t.id !== topicId);
+  saveState();
+  render();
+  renderTopicModal();
+}
+
+function renderTopicModal() {
+  const list = document.getElementById('topic-list');
+  list.innerHTML = '';
+  for (const topic of state.topics) {
+    const row = document.createElement('div');
+    row.className = 'topic-row';
+    row.innerHTML = `
+      <span class="tcolor" style="background:${topic.color}"></span>
+      <span class="tname">${topic.name}</span>
+      <button class="rename">重命名</button>
+      <button class="del">删除</button>
+    `;
+    // Color swatch → click to open a native color picker for custom theme color
+    const swatch = row.querySelector('.tcolor');
+    swatch.style.cursor = 'pointer';
+    swatch.title = '点击修改颜色';
+    swatch.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'color';
+      input.className = 'tcolor-edit';
+      input.value = topic.color;
+      swatch.replaceWith(input);
+      input.addEventListener('input', () => {
+        topic.color = input.value;
+        topic.textColor = getTextColorForBg(topic.color);
+        saveState();
+        render();
+      });
+      input.addEventListener('change', () => {
+        saveState();
+        renderTopicModal();
+      });
+      input.addEventListener('blur', () => renderTopicModal());
+      input.click();
+    });
+    row.querySelector('.rename').addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.className = 'tname-edit';
+      input.value = topic.name;
+      row.querySelector('.tname').replaceWith(input);
+      input.focus();
+      const finish = () => {
+        const newName = input.value.trim();
+        if (newName && newName !== topic.name) {
+          // Update cards with old tag
+          for (const card of state.ideas) {
+            if (card.tags) {
+              const idx = card.tags.indexOf(topic.name);
+              if (idx >= 0) card.tags[idx] = newName;
+            }
+          }
+          topic.name = newName;
+          saveState();
+          render();
+          renderTopicModal();
+        } else {
+          renderTopicModal();
+        }
+      };
+      input.addEventListener('blur', finish);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') finish(); });
+    });
+    row.querySelector('.del').addEventListener('click', () => deleteTopic(topic.id));
+    list.appendChild(row);
+  }
+}
+
+// ===== Archive Drawer =====
+function openArchiveDrawer() {
+  document.getElementById('archive-overlay').classList.add('open');
+  document.getElementById('archive-drawer').classList.add('open');
+  renderArchiveList();
+}
+
+function closeArchiveDrawer() {
+  document.getElementById('archive-overlay').classList.remove('open');
+  document.getElementById('archive-drawer').classList.remove('open');
+}
+
+function renderArchiveList() {
+  const list = document.getElementById('archive-list');
+  const archived = state.ideas.filter(c => c.status === 'archived');
+  list.innerHTML = '';
+  if (archived.length === 0) {
+    list.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px;">暂无归档想法</div>';
+    return;
+  }
+  for (const card of archived) {
+    const item = document.createElement('div');
+    item.className = 'archive-item';
+    // Restore button placed BELOW the text, full-width (touch-friendly)
+    item.innerHTML = `
+      <span class="arc-text">${card.text}</span>
+      <button class="restore">恢复</button>
+    `;
+    item.querySelector('.restore').addEventListener('click', () => {
+      card.status = card.tags && card.tags.length > 0 ? 'sorted' : 'raw';
+      card.position = findSpotInZone(getZoneForCard(card), card.id);
+      saveState();
+      render();
+      renderArchiveList();
+      showToast('已恢复');
+    });
+    list.appendChild(item);
+  }
+}
+
+// ===== Edit Modal =====
+let editingCardId = null;
+
+function openEditModal(card) {
+  editingCardId = card.id;
+  document.getElementById('edit-text').value = card.text;
+  document.getElementById('edit-tags-input').value = (card.tags || []).join(' ');
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('edit-text').focus();
+}
+
+function closeEditModal() {
+  editingCardId = null;
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('tag-autocomplete').style.display = 'none';
+}
+
+function saveEdit() {
+  if (!editingCardId) return;
+  const text = document.getElementById('edit-text').value.trim();
+  if (!text) { showToast('内容不能为空'); return; }
+  const tagsRaw = document.getElementById('edit-tags-input').value.trim();
+  const tags = tagsRaw ? tagsRaw.split(/\s+/).filter(Boolean) : [];
+  updateIdea(editingCardId, { text, tags });
+  closeEditModal();
+  showToast('已保存');
+}
+
+document.getElementById('btn-edit-save').addEventListener('click', saveEdit);
+document.getElementById('btn-edit-cancel').addEventListener('click', closeEditModal);
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeEditModal();
+});
+
+// Ctrl+Enter inside the edit textarea saves
+document.getElementById('edit-text').addEventListener('keydown', e => {
+  if (isMod(e) && e.key === 'Enter') { e.preventDefault(); saveEdit(); }
+});
+
+// ===== Tag autocomplete in edit modal =====
+function getAllTags() {
+  const set = new Set();
+  state.topics.forEach(t => set.add(t.name));
+  state.ideas.forEach(c => { if (c.tags) c.tags.forEach(tg => set.add(tg)); });
+  return [...set];
+}
+
+const tagsInput = document.getElementById('edit-tags-input');
+const acBox = document.getElementById('tag-autocomplete');
+let acItems = [], acIdx = -1;
+
+function renderAcActive() {
+  acBox.querySelectorAll('div').forEach((d, i) => d.classList.toggle('ac-active', i === acIdx));
+}
+
+function acceptAc() {
+  if (acIdx < 0 || !acItems[acIdx]) return;
+  const tag = acItems[acIdx];
+  const parts = tagsInput.value.trim().split(/\s+/).filter(Boolean);
+  // replace the currently-typed fragment (last token) with the chosen tag
+  if (parts.length) parts[parts.length - 1] = tag; else parts.push(tag);
+  tagsInput.value = parts.join(' ') + ' ';
+  acBox.style.display = 'none';
+  acIdx = -1;
+  tagsInput.focus();
+}
+
+tagsInput.addEventListener('input', () => {
+  const val = tagsInput.value;
+  const parts = val.split(/\s+/);
+  const frag = parts[parts.length - 1].toLowerCase();
+  if (!frag) { acBox.style.display = 'none'; return; }
+  const used = new Set(parts.slice(0, -1).map(s => s.toLowerCase()));
+  const matches = getAllTags().filter(t => t.toLowerCase().includes(frag) && !used.has(t.toLowerCase())).slice(0, 6);
+  if (!matches.length) { acBox.style.display = 'none'; return; }
+  acItems = matches;
+  acIdx = -1;
+  acBox.innerHTML = matches.map((m, i) => `<div data-i="${i}">${m}</div>`).join('');
+  acBox.style.display = 'block';
+});
+
+tagsInput.addEventListener('keydown', e => {
+  if (acBox.style.display === 'block') {
+    if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = (acIdx + 1) % acItems.length; renderAcActive(); return; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = (acIdx - 1 + acItems.length) % acItems.length; renderAcActive(); return; }
+    if (e.key === 'Enter' && acIdx >= 0) { e.preventDefault(); acceptAc(); return; }
+    if (e.key === 'Escape') { acBox.style.display = 'none'; return; }
+  }
+});
+
+acBox.addEventListener('click', e => {
+  const d = e.target.closest('div[data-i]');
+  if (!d) return;
+  acIdx = +d.dataset.i;
+  acceptAc();
+});
+
+tagsInput.addEventListener('blur', () => { setTimeout(() => { acBox.style.display = 'none'; }, 150); });
+
+// ===== Import/Export =====
+document.getElementById('btn-export').addEventListener('click', () => {
+  const json = JSON.stringify({ ideas: state.ideas, topics: state.topics, meta: state.meta }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  // Local timezone filename: mindspace-YYYYMMDD-HHmmss
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mindspace-${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('导出成功');
+});
+
+let importMode = 'merge';
+let importFileData = null;
+
+document.getElementById('btn-import').addEventListener('click', () => {
+  document.getElementById('import-modal').classList.add('open');
+  document.getElementById('import-file').value = '';
+  importFileData = null;
+});
+
+document.getElementById('import-file').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) { importFileData = null; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      importFileData = JSON.parse(reader.result);
+    } catch (e) {
+      showToast('文件格式无效');
+      importFileData = null;
+    }
+  };
+  reader.readAsText(file);
+});
+
+document.querySelectorAll('#import-modal .mode-btns button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#import-modal .mode-btns button').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    importMode = btn.dataset.mode;
+  });
+});
+
+document.getElementById('btn-import-do').addEventListener('click', async () => {
+  if (!importFileData) { showToast('请先选择文件'); return; }
+  if (!importFileData.ideas || !Array.isArray(importFileData.ideas)) {
+    showToast('文件数据格式无效（缺少 ideas 数组）');
+    return;
+  }
+  // 1.3: 若导入的是旧 v2 数据（meta.migratedV3 非 true），先将其坐标迁移到窗口中心坐标系
+  const importedIsV2 = !(importFileData.meta && importFileData.meta.migratedV3);
+  if (importedIsV2) migrateImportedData(importFileData);
+
+  if (importMode === 'overwrite') {
+    const ok = await showConfirm('覆盖模式将替换全部现有数据，确定继续？');
+    if (!ok) return;
+    state.ideas = importFileData.ideas;
+    state.topics = importFileData.topics || [];
+    state.meta = importFileData.meta || { version: 1, tutorialShown: true };
+    state.meta.migratedV3 = true; // 已迁移
+  } else {
+    // Merge: add new ideas by id dedup
+    const existingIds = new Set(state.ideas.map(c => c.id));
+    for (const idea of importFileData.ideas) {
+      if (!existingIds.has(idea.id)) state.ideas.push(idea);
+    }
+    const existingTopicNames = new Set(state.topics.map(t => t.name));
+    for (const topic of (importFileData.topics || [])) {
+      if (!existingTopicNames.has(topic.name)) state.topics.push(topic);
+    }
+  }
+  saveState();
+  render();
+  centerViewOnUnsorted();
+  document.getElementById('import-modal').classList.remove('open');
+  showToast('导入成功');
+});
+
+/** 1.3: 迁移导入的 v2 数据坐标（仅作用于导入对象，不影响现有 state） */
+function migrateImportedData(data) {
+  const oldOff = UNSORTED_OLD_OFFSET;
+  const newOff = getUnsortedZonePosition();
+  const dx = newOff.x - oldOff.x;
+  const dy = newOff.y - oldOff.y;
+  for (const card of (data.ideas || [])) {
+    if (card.position) { card.position.x += dx; card.position.y += dy; }
+  }
+  for (const topic of (data.topics || [])) {
+    if (topic.position) { topic.position.x += dx; topic.position.y += dy; }
+  }
+}
+
+document.getElementById('btn-import-cancel').addEventListener('click', () => {
+  document.getElementById('import-modal').classList.remove('open');
+});
+
+// ===== Clear All Ideas (功能2: 一键清空，二次确认 + 可撤销) =====
+document.getElementById('btn-clear-all').addEventListener('click', async () => {
+  if (state.ideas.length === 0) { showToast('当前没有想法'); return; }
+  const totalCount = state.ideas.length;
+  const archivedCount = state.ideas.filter(c => c.status === 'archived').length;
+  const activeCount = totalCount - archivedCount;
+  const ok = await showConfirm(
+    `确定要删除所有想法吗？\n\n` +
+    `将删除 ${activeCount} 条活跃想法` +
+    (archivedCount > 0 ? ` 和 ${archivedCount} 条已归档想法` : '') +
+    `\n\n此操作可通过 Ctrl+Z 撤销。`
+  );
+  if (!ok) return;
+  // 推入撤销栈（深拷贝所有想法，含已归档）
+  pushUndo({ type: 'clearAll', cards: JSON.parse(JSON.stringify(state.ideas)) });
+  // 清空想法（保留主题色区）
+  state.ideas = [];
+  saveState();
+  render();
+  showToast(`已删除 ${totalCount} 条想法（可撤销）`);
+});
+
+// ===== Drag System =====
+const canvasWrap = document.getElementById('canvas-wrap');
+const canvas = document.getElementById('canvas');
+
+let dragState = null; // null | { type: 'card' | 'zone' | 'pan', ... }
+
+function canvasPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: (e.clientX - rect.left) / view.scale, y: (e.clientY - rect.top) / view.scale };
+}
+
+/**
+ * pointerdown handler: decides what the user grabbed (card / zone header / blank canvas)
+ * and starts the corresponding drag. Buttons/inputs are excluded so they keep working.
+ */
+canvasWrap.addEventListener('pointerdown', e => {
+  if (dragState) return;
+
+  const target = e.target;
+  // Check if clicking on card
+  const cardEl = target.closest('.card');
+  if (cardEl) {
+    const cardId = cardEl.dataset.id;
+    const card = state.ideas.find(c => c.id === cardId);
+    if (!card) return;
+    e.preventDefault();
+    dragState = { type: 'card', cardId, startX: e.clientX, startY: e.clientY, origX: card.position.x, origY: card.position.y };
+    cardEl.classList.add('dragging');
+    canvasWrap.classList.add('dragging-card');
+    cardEl.setPointerCapture(e.pointerId);
+    return;
+  }
+
+  // Check if clicking on zone header
+  const zoneHeader = target.closest('.zone-header');
+  if (zoneHeader) {
+    const zoneEl = zoneHeader.closest('.zone');
+    const zoneId = zoneEl.dataset.topicId;
+    if (zoneId === UNSORTED_ID) return; // can't move unsorted zone
+    const zone = state.topics.find(t => t.id === zoneId);
+    if (!zone) return;
+    e.preventDefault();
+    dragState = { type: 'zone', zoneId, startX: e.clientX, startY: e.clientY, origX: zone.position.x, origY: zone.position.y };
+    zoneHeader.setPointerCapture(e.pointerId);
+    return;
+  }
+
+  // Don't pan if clicking buttons/inputs
+  if (target.closest('button') || target.closest('input') || target.closest('textarea')) return;
+
+  // Pan canvas
+  e.preventDefault();
+  dragState = { type: 'pan', startX: e.clientX, startY: e.clientY, origTx: view.tx, origTy: view.ty };
+  canvasWrap.classList.add('grabbing');
+  canvasWrap.setPointerCapture(e.pointerId);
+});
+
+/**
+ * pointermove handler: updates the in-progress drag — moves a card, relocates a zone,
+ * or pans the canvas. Card drags also highlight the zone under the cursor.
+ */
+canvasWrap.addEventListener('pointermove', e => {
+  if (!dragState) return;
+  const dx = e.clientX - dragState.startX;
+  const dy = e.clientY - dragState.startY;
+
+  if (dragState.type === 'card') {
+    const card = state.ideas.find(c => c.id === dragState.cardId);
+    if (!card) return;
+    card.position.x = dragState.origX + dx / view.scale;
+    card.position.y = dragState.origY + dy / view.scale;
+    const el = canvas.querySelector(`.card[data-id="${dragState.cardId}"]`);
+    if (el) {
+      el.style.left = card.position.x + 'px';
+      el.style.top = card.position.y + 'px';
+    }
+    // Highlight zone under card
+    highlightZoneUnderCard(card);
+  } else if (dragState.type === 'zone') {
+    const zone = state.topics.find(t => t.id === dragState.zoneId);
+    if (!zone) return;
+    zone.position.x = dragState.origX + dx / view.scale;
+    zone.position.y = dragState.origY + dy / view.scale;
+    const el = canvas.querySelector(`.zone[data-topic-id="${dragState.zoneId}"]`);
+    if (el) {
+      el.style.left = zone.position.x + 'px';
+      el.style.top = zone.position.y + 'px';
+    }
+  } else if (dragState.type === 'pan') {
+    view.tx = dragState.origTx + dx;
+    view.ty = dragState.origTy + dy;
+    updateCanvasTransform();
+  }
+});
+
+/**
+ * pointerup handler: finalizes the drag. For cards: a short click opens the edit modal;
+ * a real drop assigns the card to the zone under its center (or, if dropped on blank
+ * space, keeps its tags & status and only commits the new position).
+ */
+canvasWrap.addEventListener('pointerup', e => {
+  if (!dragState) return;
+
+  if (dragState.type === 'card') {
+    const cardEl = canvas.querySelector(`.card[data-id="${dragState.cardId}"]`);
+    if (cardEl) cardEl.classList.remove('dragging');
+    canvasWrap.classList.remove('dragging-card');
+    clearZoneHighlights();
+
+    const dx = Math.abs(e.clientX - dragState.startX);
+    const dy = Math.abs(e.clientY - dragState.startY);
+    // 3.3: Mac 模式下提高点击-编辑阈值，避免触控板轻触误触编辑
+    const clickThreshold = osMode === 'mac' ? 8 : 4;
+    const wasClick = dx < clickThreshold && dy < clickThreshold;
+    const cardId = dragState.cardId;
+
+    if (wasClick) {
+      // Short click → edit
+      dragState = null;
+      const card = state.ideas.find(c => c.id === cardId);
+      if (card) openEditModal(card);
+      return;
+    }
+
+    const card = state.ideas.find(c => c.id === dragState.cardId);
+    if (card) {
+      // Check if dropped into a zone
+      const cx = card.position.x + CARD_W / 2;
+      const cy = card.position.y + CARD_H / 2;
+      const allZones = getAllZones();
+      let targetZone = null;
+      for (const zone of allZones) {
+        const zh = computeZoneHeight(zone);
+        if (cx >= zone.position.x && cx <= zone.position.x + ZONE_W &&
+            cy >= zone.position.y && cy <= zone.position.y + zh) {
+          targetZone = zone;
+          break;
+        }
+      }
+      if (targetZone && targetZone.id !== UNSORTED_ID) {
+        // Dropped on a topic zone → assign tag (keep existing tags, prepend zone name)
+        if (!card.tags) card.tags = [];
+        if (!card.tags.includes(targetZone.name)) {
+          card.tags.unshift(targetZone.name);
+          card.status = 'sorted';
+        }
+      } else if (targetZone && targetZone.id === UNSORTED_ID) {
+        // Dropped on the unsorted zone → strip tags
+        card.tags = [];
+        card.status = 'raw';
+      }
+      // else: dropped on blank (non-zone) → keep tags & status, only position changed
+      saveState();
+      render();
+    }
+  } else if (dragState.type === 'zone') {
+    saveState();
+    render();
+  } else if (dragState.type === 'pan') {
+    canvasWrap.classList.remove('grabbing');
+  }
+  dragState = null;
+});
+
+function highlightZoneUnderCard(card) {
+  clearZoneHighlights();
+  const cx = card.position.x + CARD_W / 2;
+  const cy = card.position.y + CARD_H / 2;
+  const allZones = getAllZones();
+  for (const zone of allZones) {
+    const zh = computeZoneHeight(zone);
+    if (cx >= zone.position.x && cx <= zone.position.x + ZONE_W &&
+        cy >= zone.position.y && cy <= zone.position.y + zh) {
+      const el = canvas.querySelector(`.zone[data-topic-id="${zone.id}"]`);
+      if (el) el.classList.add('zone-hover');
+      break;
+    }
+  }
+}
+
+function clearZoneHighlights() {
+  canvas.querySelectorAll('.zone-hover').forEach(el => el.classList.remove('zone-hover'));
+}
+
+// ===== Zoom / Pan (wheel) — Part 3: Mac 触控板手势支持 =====
+// Mac 触控板与外接鼠标都触发 wheel，区分方式：
+//  - e.ctrlKey === true → 触控板双指捏合缩放（macOS 系统级行为）
+//  - e.ctrlKey === false 且 e.deltaMode === 0（像素级）→ 触控板双指滚动平移
+//  - e.ctrlKey === false 且 e.deltaMode === 1（行级）→ 外接鼠标滚轮 → 缩放
+canvasWrap.addEventListener('wheel', e => {
+  e.preventDefault();
+
+  if (osMode === 'mac') {
+    if (e.ctrlKey) {
+      // 3.1: 双指捏合缩放（以光标为中心，步长更小更平滑）
+      const delta = e.deltaY > 0 ? -0.02 : 0.02;
+      const oldScale = view.scale;
+      view.scale = Math.max(0.1, Math.min(3, view.scale * (1 + delta)));
+      const rect = canvasWrap.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const scaleChange = view.scale / oldScale;
+      view.tx = mx - (mx - view.tx) * scaleChange;
+      view.ty = my - (my - view.ty) * scaleChange;
+      updateCanvasTransform();
+    } else if (e.deltaMode === 0) {
+      // 3.2: 双指滚动平移画布
+      view.tx -= e.deltaX;
+      view.ty -= e.deltaY;
+      updateCanvasTransform();
+    } else {
+      // 外接鼠标滚轮 → 缩放（同 Win 逻辑）
+      wheelZoom(e);
+    }
+  } else {
+    // Win 模式：保持现有滚轮缩放
+    wheelZoom(e);
+  }
+}, { passive: false });
+
+/** 滚轮缩放（以光标为中心），Win 模式与 Mac 外接鼠标共用 */
+function wheelZoom(e) {
+  const delta = e.deltaY > 0 ? -0.08 : 0.08;
+  const oldScale = view.scale;
+  view.scale = Math.max(0.1, Math.min(3, view.scale * (1 + delta)));
+  const rect = canvasWrap.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const scaleChange = view.scale / oldScale;
+  view.tx = mx - (mx - view.tx) * scaleChange;
+  view.ty = my - (my - view.ty) * scaleChange;
+  updateCanvasTransform();
+}
+
+// ===== Input =====
+const ideaInput = document.getElementById('idea-input');
+
+/** Parse the idea input (^tag syntax) and create a card, then clear the field. */
+function submitIdea() {
+  const raw = ideaInput.value.trim();
+  if (!raw) return;
+  // Parse tags
+  const tagMatches = [...raw.matchAll(/\^(\S+)/g)];
+  const tags = tagMatches.map(m => m[1]);
+  let text = raw;
+  for (const m of tagMatches) {
+    text = text.replace(m[0], '').trim();
+  }
+  if (!text) { showToast('请输入想法内容'); return; }
+  createIdea(text, tags);
+  ideaInput.value = '';
+  showToast('已记录');
+}
+
+ideaInput.addEventListener('keydown', e => {
+  // 只响应纯 Enter，让 Ctrl/Cmd+Enter 走全局监听器
+  if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+    e.preventDefault();
+    submitIdea();
+  }
+  if (e.key === 'Escape') { ideaInput.value = ''; }
+});
+
+// Save draft on unload
+window.addEventListener('beforeunload', () => {
+  try { localStorage.setItem('mindspace.draft', ideaInput.value); } catch(e) {}
+});
+
+// Restore draft
+(function() {
+  try {
+    const draft = localStorage.getItem('mindspace.draft');
+    if (draft) ideaInput.value = draft;
+  } catch(e) {}
+})();
+
+// ===== Search =====
+const searchInput = document.getElementById('search-input');
+searchInput.addEventListener('input', () => {
+  render();
+  // Auto-fit view so all search hits are visible (fixes search-result drift)
+  const term = searchInput.value.trim().toLowerCase();
+  if (term) {
+    const hits = getVisibleIdeas();
+    if (hits.length) fitViewToCards(hits);
+  }
+});
+
+// ===== View Tabs =====
+document.getElementById('view-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  document.querySelectorAll('#view-tabs button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  view.mode = btn.dataset.view;
+  searchInput.value = '';
+  render();
+  if (view.mode === 'archived') {
+    closeArchiveDrawer();
+  }
+});
+
+// ===== Archive drawer =====
+document.getElementById('btn-archive-list').addEventListener('click', openArchiveDrawer);
+document.getElementById('btn-close-archive').addEventListener('click', closeArchiveDrawer);
+document.getElementById('archive-overlay').addEventListener('click', closeArchiveDrawer);
+
+// ===== Topic Modal =====
+document.getElementById('btn-topics').addEventListener('click', () => {
+  renderTopicModal();
+  document.getElementById('topic-modal').classList.add('open');
+  document.getElementById('new-topic-name').value = '';
+});
+
+document.getElementById('btn-topic-close').addEventListener('click', () => {
+  document.getElementById('topic-modal').classList.remove('open');
+});
+
+document.getElementById('btn-add-topic').addEventListener('click', () => {
+  const name = document.getElementById('new-topic-name').value.trim();
+  if (!name) { showToast('请输入主题名称'); return; }
+  if (name === '未分区') { showToast('不能使用"未分区"作为主题名'); return; }
+  if (state.topics.some(t => t.name === name)) { showToast('主题名已存在'); return; }
+  const color = getNextTopicColor();
+  const pos = getNextZonePosition();
+  state.topics.push({ id: uuid(), name, color, textColor: getTextColorForBg(color), position: pos });
+  saveState();
+  render();
+  renderTopicModal();
+  document.getElementById('new-topic-name').value = '';
+  showToast('主题已创建');
+});
+
+document.getElementById('topic-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) document.getElementById('topic-modal').classList.remove('open');
+});
+
+// ===== Home button (back to origin) =====
+document.getElementById('btn-home').addEventListener('click', () => {
+  centerViewOnUnsorted();
+  showToast('已回到原点');
+});
+
+// ===== Theme & OS toggles =====
+document.getElementById('btn-theme').addEventListener('click', () => {
+  const root = document.documentElement;
+  const isDark = root.getAttribute('data-theme') === 'dark' ||
+    (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const next = isDark ? 'light' : 'dark';
+  try { localStorage.setItem('mindspace.theme', next); } catch(e) {}
+  applyTheme();
+});
+
+document.getElementById('btn-os').addEventListener('click', () => {
+  osMode = osMode === 'mac' ? 'win' : 'mac';
+  try { localStorage.setItem('mindspace.osMode', osMode); } catch(e) {}
+  applyOsMode();
+  showToast(osMode === 'mac' ? '已切换到 Mac 模式' : '已切换到 Win 模式');
+});
+
+// ===== Close-all-overlays (Esc) =====
+function closeAllOverlays() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('topic-modal').classList.remove('open');
+  document.getElementById('import-modal').classList.remove('open');
+  document.getElementById('confirm-overlay').classList.remove('open');
+  document.getElementById('tutorial-overlay').classList.remove('open');
+  document.getElementById('tag-autocomplete').style.display = 'none';
+  closeArchiveDrawer();
+}
+
+// ===== Global keyboard shortcuts =====
+document.addEventListener('keydown', e => {
+  // Esc closes all popovers / drawers
+  if (e.key === 'Escape') { closeAllOverlays(); return; }
+
+  const mod = isMod(e);
+
+  // Ctrl/Cmd + Enter → 智能判断：编辑弹窗打开→保存；焦点在输入框→提交；否则→聚焦输入框
+  if (mod && e.key === 'Enter') {
+    e.preventDefault();
+    // 1. 编辑弹窗打开 → 保存编辑
+    if (document.getElementById('modal-overlay').classList.contains('open')) {
+      saveEdit();
+      return;
+    }
+    // 2. 焦点在想法输入框 → 提交想法
+    if (document.activeElement === ideaInput) {
+      submitIdea();
+      return;
+    }
+    // 3. 其他情况（画布、搜索框、按钮等）→ 聚焦到想法输入框
+    ideaInput.focus();
+    return;
+  }
+  // Ctrl/Cmd + K → focus search
+  if (mod && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+    return;
+  }
+  // Ctrl/Cmd + Z → undo (don't hijack native undo inside text fields)
+  if (mod && (e.key === 'z' || e.key === 'Z')) {
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    e.preventDefault();
+    undo();
+    return;
+  }
+});
+
+// ===== Tutorial =====
+function showTutorial() {
+  document.getElementById('tutorial-overlay').classList.add('open');
+}
+
+document.getElementById('btn-tutorial-start').addEventListener('click', () => {
+  document.getElementById('tutorial-overlay').classList.remove('open');
+  state.meta.tutorialShown = true;
+  saveState();
+});
+
+// ===== Part 2: 底部常显快捷键提示条 =====
+/** 渲染底部快捷键提示条（根据 OS 模式动态显示） */
+function renderShortcutHint() {
+  const mod = osMode === 'mac' ? '⌘' : 'Ctrl';
+  const hintEl = document.getElementById('shortcut-hint');
+  if (!hintEl) return;
+  let html = '';
+  html += `<kbd>${mod}</kbd>+<kbd>Enter</kbd> 记录`;
+  html += `<span class="sep">·</span>`;
+  html += `<kbd>${mod}</kbd>+<kbd>K</kbd> 搜索`;
+  html += `<span class="sep">·</span>`;
+  html += `<kbd>${mod}</kbd>+<kbd>Z</kbd> 撤销`;
+  html += `<span class="sep">·</span>`;
+  html += `<kbd>Esc</kbd> 关闭`;
+  // Mac 模式额外显示触控板手势
+  if (osMode === 'mac') {
+    html += `<span class="sep">·</span>`;
+    html += `双指捏合缩放`;
+    html += `<span class="sep">·</span>`;
+    html += `双指滑动平移`;
+  }
+  hintEl.innerHTML = html;
+}
+
+// ===== Part 3.4: 双击智能缩放（Mac 模式，可选） =====
+canvasWrap.addEventListener('dblclick', e => {
+  if (osMode !== 'mac') return;
+  const cardEl = e.target.closest('.card');
+  if (cardEl) {
+    // 双击卡片 → 缩放居中到该卡片 (scale=1.5)
+    const card = state.ideas.find(c => c.id === cardEl.dataset.id);
+    if (card) {
+      const vp = document.getElementById('canvas-wrap');
+      view.scale = 1.5;
+      view.tx = vp.clientWidth / 2 - (card.position.x + CARD_W / 2) * view.scale;
+      view.ty = vp.clientHeight / 2 - (card.position.y + CARD_H / 2) * view.scale;
+      updateCanvasTransform();
+    }
+  } else if (!e.target.closest('button') && !e.target.closest('input')) {
+    // 双击空白 → 自适应到所有可见卡片
+    const visible = getVisibleIdeas();
+    if (visible.length) fitViewToCards(visible);
+  }
+});
+
+// ===== Init =====
+function init() {
+  applyTheme();
+  applyOsMode();
+  loadState();
+  render();
+  centerViewOnUnsorted();
+
+  // v3.1: 初始化快捷键提示条
+  renderShortcutHint();
+
+  if (!state.meta.tutorialShown) {
+    showTutorial();
+  }
+
+  // Focus input
+  setTimeout(() => ideaInput.focus(), 10);
+}
+
+init();
+</script>
+</body>
+</html>
