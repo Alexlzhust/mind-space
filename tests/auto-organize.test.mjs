@@ -142,6 +142,7 @@ test('one topic is placed directly above the unsorted zone', () => {
 
   assert.equal(positions.health.x, center.x);
   assert.ok(positions.health.y < center.y);
+  assert.ok(center.y - positions.health.y <= 600, 'small layouts should stay readable');
 });
 
 test('snapshot restore returns state metadata and viewport to previous values', () => {

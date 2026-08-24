@@ -11,6 +11,7 @@ A pure front-end thought-organizing tool — dump ideas from your mind onto an i
 ### Core
 - **Quick capture**: Type an idea in the top input bar, press `Enter` to create a card. Supports `^tag` syntax for instant tagging (e.g. `want to run ^health`)
 - **Zone categorization**: Drag a card into a colored zone to auto-categorize. Custom themes with editable names and colors
+- **Automatic organization**: One click classifies active cards into existing topics and arranges topic zones around the centered unsorted zone. Matching uses local topic names, tags, and learned keywords; it creates no topics, sends no data to a server, and the whole operation can be undone with `Ctrl/Cmd+Z`
 - **Wheel zoom / drag pan**: Infinite canvas, free exploration
 - **Archive without loss**: Archived ideas can be restored anytime from the drawer
 - **Search auto-fit**: Searching auto-focuses the viewport onto matching cards

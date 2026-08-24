@@ -133,7 +133,10 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 #header {
   height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px;
   background: var(--bg-header); border-bottom: 1px solid var(--border); z-index: 100; position: relative;
+  overflow-x: auto; scrollbar-width: none;
 }
+#header::-webkit-scrollbar { display: none; }
+#header button, #view-tabs { flex-shrink: 0; }
 #header .logo { font-size: 18px; font-weight: 700; color: var(--accent); white-space: nowrap; }
 #header input[type="text"] { flex: 1; max-width: 360px; height: 34px; padding: 0 10px; border: 1px solid var(--border-input); border-radius: var(--btn-radius); font-size: 13px; background: var(--bg-input); }
 #header input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,127,165,0.15); }
@@ -435,6 +438,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
     <button data-view="archived">已归档</button>
   </div>
   <span class="sep"></span>
+  <button class="tool primary" id="btn-auto-organize" title="按现有主题自动整理卡片和色区">自动整理</button>
   <button class="tool" id="btn-topics">管理主题</button>
   <button class="tool" id="btn-archive-list">归档列表</button>
   <button class="tool" id="btn-export">导出</button>
@@ -682,13 +686,17 @@ const MindSpaceOrganizer = (() => {
     const centerY = center.y + zoneHeight / 2;
     let offset = 0;
     let ring = 0;
+    let previousRadius = 0;
 
     while (offset < topics.length) {
-      const minimumRadius = ((zoneWidth + gap) * 8) / (Math.PI * 2);
       const ringSpacing = Math.max(zoneWidth, zoneHeight) + gap;
-      const radius = Math.max(ringSpacing, minimumRadius) + ring * ringSpacing;
-      const capacity = Math.max(8, Math.floor((Math.PI * 2 * radius) / (zoneWidth + gap)));
+      const capacity = 8 + ring * 4;
       const ringTopics = topics.slice(offset, offset + capacity);
+      const circumferenceRadius = ((zoneWidth + gap) * ringTopics.length) / (Math.PI * 2);
+      const minimumRadius = Math.max(zoneHeight + gap, circumferenceRadius);
+      const radius = ring === 0
+        ? minimumRadius
+        : Math.max(minimumRadius, previousRadius + ringSpacing);
 
       ringTopics.forEach((topic, index) => {
         const angle = -Math.PI / 2 + (Math.PI * 2 * index) / ringTopics.length;
@@ -705,6 +713,7 @@ const MindSpaceOrganizer = (() => {
       });
 
       offset += ringTopics.length;
+      previousRadius = radius;
       ring++;
     }
 
@@ -2149,6 +2158,8 @@ document.getElementById('btn-add-topic').addEventListener('click', () => {
 document.getElementById('topic-modal').addEventListener('click', e => {
   if (e.target === e.currentTarget) document.getElementById('topic-modal').classList.remove('open');
 });
+
+document.getElementById('btn-auto-organize').addEventListener('click', autoOrganize);
 
 // ===== Home button (back to origin) =====
 document.getElementById('btn-home').addEventListener('click', () => {
