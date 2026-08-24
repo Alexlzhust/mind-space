@@ -44,8 +44,8 @@ test('ambiguous equal scores remain unsorted', () => {
 
 test('learned keywords classify an untagged card', () => {
   const ideas = [
-    { id: 'seed', text: '跑步训练计划', tags: ['健康'], status: 'sorted' },
-    { id: 'new', text: '周末继续跑步', tags: [], status: 'raw' }
+    { id: 'seed', text: '跑步 训练 周末 计划', tags: ['健康'], status: 'sorted' },
+    { id: 'new', text: '周末跑步训练计划', tags: [], status: 'raw' }
   ];
 
   assert.equal(organizer.classifyIdeas(ideas, topics).assignments.new, 'health');
@@ -111,6 +111,22 @@ test('radial layout starts above center and stays in canvas bounds', () => {
   for (const position of Object.values(positions)) {
     assert.ok(position.x >= 0 && position.x <= 15280);
     assert.ok(position.y >= 0 && position.y <= 15600);
+  }
+
+  const boxes = Object.values(positions).map(position => ({
+    left: position.x,
+    top: position.y,
+    right: position.x + 720,
+    bottom: position.y + 400
+  }));
+  for (let left = 0; left < boxes.length; left += 1) {
+    for (let right = left + 1; right < boxes.length; right += 1) {
+      const overlaps = !(boxes[left].right <= boxes[right].left ||
+        boxes[left].left >= boxes[right].right ||
+        boxes[left].bottom <= boxes[right].top ||
+        boxes[left].top >= boxes[right].bottom);
+      assert.equal(overlaps, false, `zones ${left} and ${right} must not overlap`);
+    }
   }
 });
 
