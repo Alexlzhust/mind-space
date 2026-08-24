@@ -567,6 +567,8 @@ const CARD_W = 220;
 const CARD_H = 100;
 const CARD_GAP_X = 20;
 const CARD_GAP_Y = 14;
+const CANVAS_W = 16000;
+const CANVAS_H = 16000;
 // 1.3: 未分区旧偏移量（v2 固定位置），用于坐标迁移
 const UNSORTED_OLD_OFFSET = { x: 1800, y: 1600 };
 
@@ -719,6 +721,18 @@ const MindSpaceOrganizer = (() => {
     return card;
   }
 
+  function createSnapshot(state, view) {
+    return JSON.parse(JSON.stringify({ state, view }));
+  }
+
+  function restoreSnapshot(targetState, targetView, snapshot) {
+    const restored = JSON.parse(JSON.stringify(snapshot));
+    targetState.ideas = restored.state.ideas;
+    targetState.topics = restored.state.topics;
+    targetState.meta = restored.state.meta;
+    Object.assign(targetView, restored.view);
+  }
+
   return {
     normalizeText,
     tokenize,
@@ -726,7 +740,9 @@ const MindSpaceOrganizer = (() => {
     classifyIdeas,
     orderTopics,
     layoutTopics,
-    applyAssignment
+    applyAssignment,
+    createSnapshot,
+    restoreSnapshot
   };
 })();
 // AUTO_ORGANIZER_CORE_END
@@ -855,6 +871,12 @@ function getUnsortedZone() {
 }
 
 function getUnsortedZonePosition() {
+  if (state.meta && state.meta.unsortedPosition) {
+    return {
+      x: state.meta.unsortedPosition.x,
+      y: state.meta.unsortedPosition.y
+    };
+  }
   // 窗口中心附近：使未分区色区大致位于视口中心
   const cx = Math.round((typeof window !== 'undefined' ? window.innerWidth : 1280) / 2 - ZONE_W / 2);
   const cy = Math.round((typeof window !== 'undefined' ? window.innerHeight : 800) / 2 - ZONE_MIN_H / 2);
@@ -1043,6 +1065,8 @@ function undo() {
   } else if (action.type === 'clearAll') {
     // 功能2: 恢复一键清空——还原全部想法
     state.ideas = action.cards;
+  } else if (action.type === 'autoOrganize') {
+    MindSpaceOrganizer.restoreSnapshot(state, view, action.snapshot);
   }
   saveState();
   render();
@@ -1242,6 +1266,103 @@ function fitViewToCards(cards) {
   view.tx = vp.clientWidth / 2 - ccx * view.scale;
   view.ty = vp.clientHeight / 2 - ccy * view.scale;
   updateCanvasTransform();
+}
+
+/** Fit all active cards and zones into the viewport after a full layout operation. */
+function fitViewToZonesAndCards() {
+  const bounds = [];
+  for (const zone of getAllZones()) {
+    bounds.push({
+      x: zone.position.x,
+      y: zone.position.y,
+      width: ZONE_W,
+      height: computeZoneHeight(zone)
+    });
+  }
+  for (const card of state.ideas.filter(item => item.status !== 'archived')) {
+    bounds.push({
+      x: card.position.x,
+      y: card.position.y,
+      width: CARD_W,
+      height: CARD_H
+    });
+  }
+
+  const minX = Math.min(...bounds.map(item => item.x));
+  const minY = Math.min(...bounds.map(item => item.y));
+  const maxX = Math.max(...bounds.map(item => item.x + item.width));
+  const maxY = Math.max(...bounds.map(item => item.y + item.height));
+  const viewport = document.getElementById('canvas-wrap');
+  const padding = 80;
+  const width = maxX - minX + padding * 2;
+  const height = maxY - minY + padding * 2;
+
+  view.scale = Math.max(0.1, Math.min(1, Math.min(
+    viewport.clientWidth / width,
+    viewport.clientHeight / height
+  )));
+  view.tx = viewport.clientWidth / 2 - ((minX + maxX) / 2) * view.scale;
+  view.ty = viewport.clientHeight / 2 - ((minY + maxY) / 2) * view.scale;
+  updateCanvasTransform();
+}
+
+/** Repack active cards inside their final zones without stale positions blocking space. */
+function repositionActiveCardsByZone() {
+  const activeIdeas = state.ideas.filter(card => card.status !== 'archived');
+  for (const card of activeIdeas) {
+    card.position = { x: -100000, y: -100000 };
+  }
+  for (const card of activeIdeas) {
+    card.position = findSpotInZone(getZoneForCard(card), card.id);
+  }
+}
+
+/** Classify active cards, arrange topic zones around the center, and save one undo snapshot. */
+function autoOrganize() {
+  if (state.topics.length === 0) {
+    centerViewOnUnsorted();
+    showToast('请先创建主题，再进行自动整理');
+    return;
+  }
+
+  const activeIdeas = state.ideas.filter(card => card.status !== 'archived');
+  const snapshot = MindSpaceOrganizer.createSnapshot(state, view);
+  const result = MindSpaceOrganizer.classifyIdeas(activeIdeas, state.topics);
+  const counts = Object.fromEntries(state.topics.map(topic => [topic.id, 0]));
+
+  for (const card of activeIdeas) {
+    const topicId = result.assignments[card.id];
+    MindSpaceOrganizer.applyAssignment(card, state.topics, topicId);
+    if (topicId) counts[topicId]++;
+  }
+
+  const orderedTopics = MindSpaceOrganizer.orderTopics(state.topics, counts);
+  state.meta.unsortedPosition = {
+    x: Math.round((CANVAS_W - ZONE_W) / 2),
+    y: Math.round((CANVAS_H - ZONE_MIN_H) / 2)
+  };
+  const positions = MindSpaceOrganizer.layoutTopics(
+    orderedTopics,
+    state.meta.unsortedPosition,
+    {
+      canvasWidth: CANVAS_W,
+      canvasHeight: CANVAS_H,
+      zoneWidth: ZONE_W,
+      zoneHeight: ZONE_MIN_H,
+      gap: 120
+    }
+  );
+
+  for (const topic of state.topics) {
+    topic.position = positions[topic.id];
+  }
+  repositionActiveCardsByZone();
+
+  pushUndo({ type: 'autoOrganize', snapshot });
+  saveState();
+  render();
+  fitViewToZonesAndCards();
+  showToast(`已整理 ${result.assignedCount} 条，${result.unsortedCount} 条保留未分类（可撤销）`);
 }
 
 // ===== Idea CRUD =====

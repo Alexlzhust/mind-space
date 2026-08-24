@@ -143,3 +143,34 @@ test('one topic is placed directly above the unsorted zone', () => {
   assert.equal(positions.health.x, center.x);
   assert.ok(positions.health.y < center.y);
 });
+
+test('snapshot restore returns state metadata and viewport to previous values', () => {
+  const state = {
+    ideas: [{
+      id: '1',
+      tags: [],
+      status: 'raw',
+      position: { x: 1, y: 2 }
+    }],
+    topics: [{
+      id: 'health',
+      name: '健康',
+      position: { x: 3, y: 4 }
+    }],
+    meta: { version: 1 }
+  };
+  const view = { mode: 'all', scale: 1, tx: 5, ty: 6 };
+  const snapshot = organizer.createSnapshot(state, view);
+
+  state.ideas[0].position.x = 99;
+  state.topics[0].position.x = 99;
+  state.meta.unsortedPosition = { x: 8000, y: 8000 };
+  view.scale = 0.2;
+  organizer.restoreSnapshot(state, view, snapshot);
+
+  assert.equal(state.ideas[0].position.x, 1);
+  assert.equal(state.topics[0].position.x, 3);
+  assert.equal(state.meta.unsortedPosition, undefined);
+  assert.equal(view.scale, 1);
+  assert.equal(view.tx, 5);
+});
