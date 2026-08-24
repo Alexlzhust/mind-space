@@ -1,0 +1,129 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const match = html.match(/\/\/ AUTO_ORGANIZER_CORE_START([\s\S]*?)\/\/ AUTO_ORGANIZER_CORE_END/);
+
+assert.ok(match, 'auto organizer core block must exist');
+
+const context = {};
+vm.runInNewContext(`${match[1]}\nthis.__organizer = MindSpaceOrganizer;`, context);
+const organizer = context.__organizer;
+const plain = value => JSON.parse(JSON.stringify(value));
+
+const topics = [
+  { id: 'health', name: '健康' },
+  { id: 'work', name: '工作' }
+];
+
+test('existing exact topic tag outranks text matches', () => {
+  const result = organizer.classifyIdeas([
+    { id: '1', text: '今天处理工作邮件', tags: ['健康'], status: 'sorted' }
+  ], topics);
+
+  assert.equal(result.assignments['1'], 'health');
+});
+
+test('full topic name classifies an untagged card', () => {
+  const result = organizer.classifyIdeas([
+    { id: '1', text: '今天要完成工作总结', tags: [], status: 'raw' }
+  ], topics);
+
+  assert.equal(result.assignments['1'], 'work');
+});
+
+test('ambiguous equal scores remain unsorted', () => {
+  const result = organizer.classifyIdeas([
+    { id: '1', text: '健康工作都要兼顾', tags: [], status: 'raw' }
+  ], topics);
+
+  assert.equal(result.assignments['1'], null);
+});
+
+test('learned keywords classify an untagged card', () => {
+  const ideas = [
+    { id: 'seed', text: '跑步训练计划', tags: ['健康'], status: 'sorted' },
+    { id: 'new', text: '周末继续跑步', tags: [], status: 'raw' }
+  ];
+
+  assert.equal(organizer.classifyIdeas(ideas, topics).assignments.new, 'health');
+});
+
+test('archived cards do not train or receive assignments', () => {
+  const ideas = [
+    { id: 'seed', text: '预算发票报销', tags: ['工作'], status: 'archived' },
+    { id: 'new', text: '整理发票', tags: [], status: 'raw' }
+  ];
+  const result = organizer.classifyIdeas(ideas, topics);
+
+  assert.equal(result.assignments.seed, undefined);
+  assert.equal(result.assignments.new, null);
+});
+
+test('topic ordering uses card count then original order', () => {
+  const counts = { health: 1, work: 3 };
+
+  assert.deepEqual(
+    plain(organizer.orderTopics(topics, counts).map(topic => topic.id)),
+    ['work', 'health']
+  );
+  assert.deepEqual(
+    plain(organizer.orderTopics(topics, { health: 2, work: 2 }).map(topic => topic.id)),
+    ['health', 'work']
+  );
+});
+
+test('applyAssignment replaces topic tags and keeps non-topic tags', () => {
+  const card = { tags: ['健康', '重要'], status: 'sorted' };
+
+  organizer.applyAssignment(card, topics, 'work');
+
+  assert.deepEqual(plain(card.tags), ['工作', '重要']);
+  assert.equal(card.status, 'sorted');
+});
+
+test('applyAssignment leaves uncertain cards in unsorted with non-topic tags', () => {
+  const card = { tags: ['健康', '重要'], status: 'sorted' };
+
+  organizer.applyAssignment(card, topics, null);
+
+  assert.deepEqual(plain(card.tags), ['重要']);
+  assert.equal(card.status, 'raw');
+});
+
+test('radial layout starts above center and stays in canvas bounds', () => {
+  const center = { x: 7640, y: 7800 };
+  const topicList = Array.from({ length: 12 }, (_, index) => ({
+    id: String(index),
+    name: `T${index}`
+  }));
+  const positions = organizer.layoutTopics(topicList, center, {
+    canvasWidth: 16000,
+    canvasHeight: 16000,
+    zoneWidth: 720,
+    zoneHeight: 400,
+    gap: 120
+  });
+
+  assert.ok(positions['0'].y < center.y);
+  for (const position of Object.values(positions)) {
+    assert.ok(position.x >= 0 && position.x <= 15280);
+    assert.ok(position.y >= 0 && position.y <= 15600);
+  }
+});
+
+test('one topic is placed directly above the unsorted zone', () => {
+  const center = { x: 7640, y: 7800 };
+  const positions = organizer.layoutTopics([topics[0]], center, {
+    canvasWidth: 16000,
+    canvasHeight: 16000,
+    zoneWidth: 720,
+    zoneHeight: 400,
+    gap: 120
+  });
+
+  assert.equal(positions.health.x, center.x);
+  assert.ok(positions.health.y < center.y);
+});
